@@ -1,0 +1,293 @@
+// ============================================================
+// 球場預約系統 — 資料模型藍圖（生產環境 / Vercel + Neon PostgreSQL）
+// 與 schema.prisma 唯一差異為 datasource provider。
+// 修改模型時請同步更新 schema.prisma 與 schema.postgres.prisma。
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// 會員 Member
+//  - 帳號登入：email + passwordHash
+//  - LINE Login：lineUserId（OAuth 綁定，獨立登入管道）
+//  - role：member（一般會員）| admin（管理員）
+// ============================================================
+model Member {
+  id             String   @id @default(cuid())
+  name           String
+  email          String?  @unique
+  phone          String?
+  passwordHash   String?
+  role           String   @default("member")
+  lineUserId     String?  @unique
+  lineName       String?
+  linePictureUrl String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bookings          Booking[]
+  courseEnrollments CourseEnrollment[]
+  orders            Order[]
+}
+
+// ============================================================
+// 場館 Venue（如「迪飛太平」；營業時間掛在場館層級）
+// ============================================================
+model Venue {
+  id          String   @id @default(cuid())
+  name        String
+  location    String?
+  phone       String?
+  openingTime String   @default("00:00") // "HH:MM"
+  closingTime String   @default("24:00") // "HH:MM"（24:00 表示全天）
+  status      String   @default("active") // active | inactive
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  courts            Court[]
+  priceRules        PriceRule[]
+  durationDiscounts DurationDiscount[]
+}
+
+// ============================================================
+// 價位規則 PriceRule（尖峰/離峰固定週規則 + 特定假日/颱風假整日價）
+// ============================================================
+model PriceRule {
+  id        String   @id @default(cuid())
+  venueId   String
+  name      String // 尖峰 / 離峰 / 國定假日…
+  price     Int // 每小時價（NT$）
+  kind      String   @default("weekly") // weekly | date
+  dayOfWeek Int? // weekly：0(日)~6(六)
+  startTime String? // weekly："HH:MM"
+  endTime   String? // weekly："HH:MM"
+  date      String? // date："YYYY-MM-DD"
+  active    String   @default("active")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId, kind])
+}
+
+// ============================================================
+// 時長折扣 DurationDiscount（滿 N 分鐘折 X 元，可指定僅限某時價）
+// ============================================================
+model DurationDiscount {
+  id          String   @id @default(cuid())
+  venueId     String
+  name        String // 滿 2 小時折 100
+  minMinutes  Int // 門檻時長（分鐘）
+  fixedAmount Int // 固定折抵金額
+  tierPrice   Int? // 僅限此「每小時價」的時段（null=所有）
+  active      String   @default("active")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+}
+
+// ============================================================
+// 場地 Court（場館內可預約的每一「面」場，如 1 號場）
+// ============================================================
+model Court {
+  id           String   @id @default(cuid())
+  venueId      String
+  name         String // 1 號場、2 號場…
+  pricePerHour Int
+  description  String?
+  status       String   @default("active") // active | inactive
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  venue        Venue         @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  images       CourtImage[]
+  facilities   CourtFacility[]
+  bookings     Booking[]
+  bookingSlots BookingSlot[]
+}
+
+model CourtImage {
+  id        String @id @default(cuid())
+  courtId   String
+  url       String
+  sortOrder Int    @default(0)
+  court     Court  @relation(fields: [courtId], references: [id], onDelete: Cascade)
+}
+
+model CourtFacility {
+  id      String @id @default(cuid())
+  courtId String
+  name    String
+  court   Court  @relation(fields: [courtId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// 訂位 Booking（核心）
+//  - 以「30 分鐘」為最小預約單位（SLOT_MINUTES = 30）。
+//  - 防重疊訂位：每一筆訂位佔用多個 30 分鐘的 BookingSlot，
+//    BookingSlot 的 @@unique([courtId, date, startTime]) 在
+//    「資料庫層級」保證同一場地同一天同一時段不可能被重複預訂。
+// ============================================================
+model Booking {
+  id         String   @id @default(cuid())
+  courtId    String
+  memberId   String
+  date            String // "YYYY-MM-DD"
+  startTime       String // "HH:MM"
+  endTime         String // "HH:MM"
+  durationMinutes Int // 30 / 60 / 90 / 120 …
+  totalPrice      Int // 折扣後總價
+  discountAmount  Int     @default(0) // 時長折扣折抵金額
+  status     String   @default("confirmed") // pending | confirmed | cancelled
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  court  Court         @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  member Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  slots  BookingSlot[]
+
+  @@index([courtId, date])
+  @@index([memberId])
+}
+
+model BookingSlot {
+  id        String  @id @default(cuid())
+  bookingId String
+  courtId   String
+  date      String
+  startTime String
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  court   Court   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  // 資料庫層級互斥：同場地、同日期、同時段唯一
+  @@unique([courtId, date, startTime])
+}
+
+// ============================================================
+// 課程 Course（未來模組）
+// ============================================================
+model Course {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   @default("入門") // 綜合 | 進階 | 入門
+  coverUrl  String?
+  syllabus  String?
+  price     Int
+  weeks     Int
+  frequency String?
+  capacity  Int      @default(0)
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  enrollments CourseEnrollment[]
+}
+
+model CourseEnrollment {
+  id        String   @id @default(cuid())
+  courseId  String
+  memberId  String
+  payStatus String   @default("pending")
+  createdAt DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, memberId])
+}
+
+// ============================================================
+// 教練 Coach（未來模組）
+// ============================================================
+model Coach {
+  id          String   @id @default(cuid())
+  name        String
+  photoUrl    String?
+  level       String?
+  years       Int      @default(0)
+  intro       String?
+  bio         String?
+  currentPost String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// ============================================================
+// 最新消息 News（未來模組）
+// ============================================================
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  coverUrl    String?
+  content     String?
+  publishDate DateTime @default(now())
+  status      String   @default("published")
+  createdAt   DateTime @default(now())
+}
+
+// ============================================================
+// 商城 Product（未來模組）
+// ============================================================
+model ProductCategory {
+  id        String    @id @default(cuid())
+  name      String
+  sortOrder Int       @default(0)
+  products  Product[]
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  categoryId String?
+  name       String
+  imageUrl   String?
+  sku        String?
+  price      Int
+  spec       String?
+  stock      Int      @default(0)
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+
+  category ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+}
+
+// ============================================================
+// 購物車 / 訂單 Order（未來模組；本版不接金流）
+// ============================================================
+model Order {
+  id        String      @id @default(cuid())
+  memberId  String
+  subtotal  Int
+  shipping  Int         @default(0)
+  total     Int
+  payStatus String      @default("pending")
+  txnId     String?
+  createdAt DateTime    @default(now())
+
+  member Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  items  OrderItem[]
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  name      String
+  price     Int
+  quantity  Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,126 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import {
+  createSession,
+  destroySession,
+  getCurrentMember,
+  hashPassword,
+  verifyPassword,
+} from "@/lib/auth";
+import { createBooking, cancelBooking } from "@/lib/booking";
+
+export type FormState = { error?: string; ok?: boolean };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function safeReturnTo(value: string | null): string {
+  if (value && value.startsWith("/") && !value.startsWith("//")) {
+    return value;
+  }
+  return "/bookings";
+}
+
+export async function registerAction(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+
+  if (!name || !email || !password) {
+    return { error: "請填寫姓名、Email 與密碼" };
+  }
+  if (!EMAIL_RE.test(email)) return { error: "Email 格式不正確" };
+  if (password.length < 6) return { error: "密碼至少 6 個字元" };
+  if (password !== confirm) return { error: "兩次輸入的密碼不一致" };
+
+  const exists = await prisma.member.findUnique({ where: { email } });
+  if (exists) return { error: "此 Email 已被註冊" };
+
+  const passwordHash = await hashPassword(password);
+  const member = await prisma.member.create({
+    data: { name, email, phone: phone || null, passwordHash },
+  });
+  await createSession(member.id);
+  redirect("/bookings");
+}
+
+export async function loginAction(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const returnTo = safeReturnTo(formData.get("returnTo") as string | null);
+
+  if (!email || !password) return { error: "請輸入 Email 與密碼" };
+
+  const member = await prisma.member.findUnique({ where: { email } });
+  if (!member || !member.passwordHash) {
+    return { error: "帳號或密碼錯誤" };
+  }
+  const ok = await verifyPassword(password, member.passwordHash);
+  if (!ok) return { error: "帳號或密碼錯誤" };
+
+  await createSession(member.id);
+  redirect(returnTo);
+}
+
+export async function logoutAction(): Promise<void> {
+  await destroySession();
+  redirect("/");
+}
+
+export async function createBookingAction(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const member = await getCurrentMember();
+  if (!member) return { error: "請先登入後再預約" };
+
+  const courtId = String(formData.get("courtId") ?? "");
+  const date = String(formData.get("date") ?? "");
+  const startTime = String(formData.get("startTime") ?? "");
+  const durationMinutes = Number(formData.get("durationMinutes") ?? 0);
+
+  let booking: { id: string };
+  try {
+    booking = await createBooking({
+      courtId,
+      memberId: member.id,
+      date,
+      startTime,
+      durationMinutes,
+    });
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "訂位失敗，請稍後再試",
+    };
+  }
+  redirect(`/bookings/success?id=${booking.id}`);
+}
+
+export async function cancelBookingAction(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const member = await getCurrentMember();
+  if (!member) return { error: "請先登入" };
+
+  const bookingId = String(formData.get("bookingId") ?? "");
+  try {
+    await cancelBooking(bookingId, member.id);
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "取消失敗，請稍後再試",
+    };
+  }
+  revalidatePath("/bookings");
+  return { ok: true };
+}
