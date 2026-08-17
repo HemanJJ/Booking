@@ -11,6 +11,8 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { createBooking, cancelBooking } from "@/lib/booking";
+import { sendLineAdminNotify } from "@/lib/notify";
+import { formatPrice } from "@/lib/utils";
 
 export type FormState = { error?: string; ok?: boolean };
 
@@ -89,7 +91,7 @@ export async function createBookingAction(
   const startTime = String(formData.get("startTime") ?? "");
   const durationMinutes = Number(formData.get("durationMinutes") ?? 0);
 
-  let booking: { id: string };
+  let booking: Awaited<ReturnType<typeof createBooking>>;
   try {
     booking = await createBooking({
       courtId,
@@ -103,6 +105,11 @@ export async function createBookingAction(
       error: e instanceof Error ? e.message : "訂位失敗，請稍後再試",
     };
   }
+
+  await sendLineAdminNotify(
+    `🟢 新訂位｜${member.name}｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}`
+  );
+
   redirect(`/bookings/success?id=${booking.id}`);
 }
 
@@ -115,7 +122,10 @@ export async function cancelBookingAction(
 
   const bookingId = String(formData.get("bookingId") ?? "");
   try {
-    await cancelBooking(bookingId, member.id);
+    const cancelled = await cancelBooking(bookingId, member.id);
+    await sendLineAdminNotify(
+      `🔴 取消訂位｜${member.name}｜${cancelled.venueName} ${cancelled.courtName}｜${cancelled.date} ${cancelled.startTime}-${cancelled.endTime}`
+    );
   } catch (e) {
     return {
       error: e instanceof Error ? e.message : "取消失敗，請稍後再試",

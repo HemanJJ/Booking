@@ -4,6 +4,7 @@ import { getCurrentMember } from "@/lib/auth";
 
 const NAV = [
   { href: "/admin", label: "儀表板" },
+  { href: "/admin/reports", label: "報表" },
   { href: "/admin/venues", label: "場館管理" },
   { href: "/admin/courts", label: "場地管理" },
   { href: "/admin/pricing", label: "價位規則" },

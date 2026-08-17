@@ -105,9 +105,15 @@ export type CreateBookingInput = {
  * BookingSlot 的 @@unique([courtId, date, startTime]) 在資料庫層級
  * 保證同一場地同一時段無法重複預訂——即便同時有多筆請求競爭亦然。
  */
-export async function createBooking(
-  input: CreateBookingInput
-): Promise<{ id: string }> {
+export async function createBooking(input: CreateBookingInput): Promise<{
+  id: string;
+  venueName: string;
+  courtName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  totalPrice: number;
+}> {
   const court = await prisma.court.findUnique({
     where: { id: input.courtId },
     include: { venue: true },
@@ -184,7 +190,15 @@ export async function createBooking(
         select: { id: true },
       });
     });
-    return booking;
+    return {
+      id: booking.id,
+      venueName: court.venue.name,
+      courtName: court.name,
+      date: input.date,
+      startTime: input.startTime,
+      endTime,
+      totalPrice,
+    };
   } catch (e) {
     if (isUniqueViolation(e)) {
       throw new Error("該時段已被預訂，請重新選擇");
@@ -197,9 +211,16 @@ export async function createBooking(
 export async function cancelBooking(
   bookingId: string,
   memberId: string
-): Promise<void> {
+): Promise<{
+  venueName: string;
+  courtName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}> {
   const booking = await prisma.booking.findFirst({
     where: { id: bookingId, memberId, status: { not: "cancelled" } },
+    include: { court: { include: { venue: true } } },
   });
   if (!booking) throw new Error("訂位不存在或已取消");
 
@@ -210,6 +231,14 @@ export async function cancelBooking(
     });
     await tx.bookingSlot.deleteMany({ where: { bookingId: booking.id } });
   });
+
+  return {
+    venueName: booking.court.venue.name,
+    courtName: booking.court.name,
+    date: booking.date,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+  };
 }
 
 function isUniqueViolation(e: unknown): boolean {
