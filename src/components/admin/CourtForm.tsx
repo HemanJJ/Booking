@@ -9,6 +9,7 @@ export type CourtInput = {
   name?: string;
   pricePerHour?: number;
   description?: string | null;
+  featured?: boolean;
   status?: string;
 };
 
@@ -76,6 +77,19 @@ export default function CourtForm({
           placeholder="場地簡介…"
           className={inputCls}
         />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          name="featured"
+          id="featured"
+          defaultChecked={court?.featured ?? false}
+          className="h-4 w-4 accent-emerald-600"
+        />
+        <label htmlFor="featured" className="text-sm font-medium">
+          精選（顯示於首頁）
+        </label>
       </div>
 
       <div>

@@ -124,3 +124,33 @@ export async function cancelBookingAction(
   revalidatePath("/bookings");
   return { ok: true };
 }
+
+export async function changePasswordAction(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const member = await getCurrentMember();
+  if (!member) return { error: "請先登入" };
+
+  const full = await prisma.member.findUnique({ where: { id: member.id } });
+  const current = String(formData.get("currentPassword") ?? "");
+  const newPw = String(formData.get("newPassword") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+
+  if (newPw.length < 6) return { error: "新密碼至少 6 個字元" };
+  if (newPw !== confirm) return { error: "兩次輸入的新密碼不一致" };
+
+  // 原本有密碼才需驗證目前密碼（LINE 首次設密碼則不用）
+  if (full?.passwordHash) {
+    const ok = await verifyPassword(current, full.passwordHash);
+    if (!ok) return { error: "目前密碼錯誤" };
+  }
+
+  const passwordHash = await hashPassword(newPw);
+  await prisma.member.update({
+    where: { id: member.id },
+    data: { passwordHash },
+  });
+
+  return { ok: true };
+}

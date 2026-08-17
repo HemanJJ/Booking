@@ -23,15 +23,27 @@ const features = [
 ];
 
 export default async function Home() {
-  const courts = await prisma.court.findMany({
-    where: { status: "active", venue: { status: "active" } },
+  let courts = await prisma.court.findMany({
+    where: { status: "active", venue: { status: "active" }, featured: true },
     orderBy: { name: "asc" },
-    take: 3,
     include: {
       venue: true,
       images: { orderBy: { sortOrder: "asc" }, take: 1 },
     },
   });
+
+  // 若沒有任何精選場地，回退顯示前 3 個
+  if (courts.length === 0) {
+    courts = await prisma.court.findMany({
+      where: { status: "active", venue: { status: "active" } },
+      orderBy: { name: "asc" },
+      take: 3,
+      include: {
+        venue: true,
+        images: { orderBy: { sortOrder: "asc" }, take: 1 },
+      },
+    });
+  }
 
   const featured = await Promise.all(
     courts.map(async (c) => {

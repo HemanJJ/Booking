@@ -108,6 +108,7 @@ model Court {
   name         String // 1 號場、2 號場…
   pricePerHour Int
   description  String?
+  featured     Boolean  @default(false) // 首頁精選展示
   status       String   @default("active") // active | inactive
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

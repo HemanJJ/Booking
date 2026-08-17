@@ -40,12 +40,13 @@ export function weekdayOf(date: string): string {
   return dt.toLocaleDateString("zh-TW", { weekday: "short" });
 }
 
-/** 營業時間顯示（00:00–24:00 → 24 小時營業） */
+/** 營業時間顯示（00:00–24:00 → 24 小時營業；24:00 顯示為 00:00） */
 export function formatHours(openingTime: string, closingTime: string): string {
   if (openingTime === "00:00" && closingTime === "24:00") {
     return "24 小時營業";
   }
-  return `${openingTime} – ${closingTime}`;
+  const close = closingTime === "24:00" ? "00:00" : closingTime;
+  return `${openingTime} – ${close}`;
 }
 
 /** 時長顯示（分鐘 → 30 分鐘 / 1 小時 / 1 小時 30 分） */

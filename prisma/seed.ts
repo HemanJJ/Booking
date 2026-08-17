@@ -41,7 +41,7 @@ async function main() {
     update: {
       name: "迪飛太平",
       location: "台中市太平區",
-      openingTime: "00:00",
+      openingTime: "08:00",
       closingTime: "24:00",
       status: "active",
     },
@@ -49,7 +49,7 @@ async function main() {
       id: "seed-venue-difei-taiping",
       name: "迪飛太平",
       location: "台中市太平區",
-      openingTime: "00:00",
+      openingTime: "08:00",
       closingTime: "24:00",
       status: "active",
     },
@@ -84,7 +84,7 @@ async function main() {
     });
   };
 
-  // 平日：00:00-18:00 離峰 300、18:00-24:00 尖峰 400
+  // 平日（一~五）：08:00-17:00 離峰 300、17:00-24:00 尖峰 400
   for (const d of [1, 2, 3, 4, 5]) {
     await upsertRule({
       id: `seed-rule-off-${d}`,
@@ -92,8 +92,8 @@ async function main() {
       price: 300,
       kind: "weekly",
       dayOfWeek: d,
-      startTime: "00:00",
-      endTime: "18:00",
+      startTime: "08:00",
+      endTime: "17:00",
     });
     await upsertRule({
       id: `seed-rule-peak-${d}`,
@@ -101,22 +101,39 @@ async function main() {
       price: 400,
       kind: "weekly",
       dayOfWeek: d,
-      startTime: "18:00",
+      startTime: "17:00",
       endTime: "24:00",
     });
   }
-  // 週末：全天尖峰 400
-  for (const d of [6, 0]) {
-    await upsertRule({
-      id: `seed-rule-peak-${d}`,
-      name: "尖峰",
-      price: 400,
-      kind: "weekly",
-      dayOfWeek: d,
-      startTime: "00:00",
-      endTime: "24:00",
-    });
-  }
+  // 週六：08:00-24:00 尖峰 400
+  await upsertRule({
+    id: "seed-rule-peak-6",
+    name: "尖峰",
+    price: 400,
+    kind: "weekly",
+    dayOfWeek: 6,
+    startTime: "08:00",
+    endTime: "24:00",
+  });
+  // 週日：08:00-20:00 尖峰 400、20:00-24:00 離峰 300
+  await upsertRule({
+    id: "seed-rule-peak-0",
+    name: "尖峰",
+    price: 400,
+    kind: "weekly",
+    dayOfWeek: 0,
+    startTime: "08:00",
+    endTime: "20:00",
+  });
+  await upsertRule({
+    id: "seed-rule-off-0",
+    name: "離峰",
+    price: 300,
+    kind: "weekly",
+    dayOfWeek: 0,
+    startTime: "20:00",
+    endTime: "24:00",
+  });
   // 範例國定假日（整日尖峰；颱風假宣布後請在後台新增 date 規則）
   await upsertRule({
     id: "seed-rule-date-2026-10-10",
@@ -125,7 +142,7 @@ async function main() {
     kind: "date",
     date: "2026-10-10",
   });
-  console.log("價位規則：尖峰 400 / 離峰 300（平日 18:00-24:00 尖峰、週末全天尖峰）＋範例國慶日");
+  console.log("價位規則：平日 08-17 離峰300 / 17-24 尖峰400、週六 08-24 尖峰、週日 08-20 尖峰 20-24 離峰＋範例國慶日");
 
   // 範例時長折扣：滿 2 小時折 100（僅限尖峰 400 的時段）
   await prisma.durationDiscount.upsert({
@@ -158,6 +175,7 @@ async function main() {
         venueId: venue.id,
         name: `${n} 號場`,
         pricePerHour: 400,
+        featured: n <= 3,
         status: "active",
       },
       create: {
@@ -165,6 +183,7 @@ async function main() {
         venueId: venue.id,
         name: `${n} 號場`,
         pricePerHour: 400,
+        featured: n <= 3,
         description: "迪飛太平標準羽球場，專業地墊與照明。",
         facilities: {
           create: FACILITIES.map((name) => ({ name })),

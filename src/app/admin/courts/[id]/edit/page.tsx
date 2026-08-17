@@ -44,6 +44,7 @@ export default async function EditCourtPage({
             name: court.name,
             pricePerHour: court.pricePerHour,
             description: court.description,
+            featured: court.featured,
             status: court.status,
           }}
         />

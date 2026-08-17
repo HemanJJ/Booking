@@ -37,6 +37,14 @@ export default async function Header() {
           >
             我的訂位
           </Link>
+          {member && (
+            <Link
+              href="/account/password"
+              className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+            >
+              修改密碼
+            </Link>
+          )}
           {member?.role === "admin" && (
             <Link
               href="/admin"

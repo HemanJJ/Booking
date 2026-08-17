@@ -30,8 +30,9 @@ export async function saveVenueAction(
   const name = String(formData.get("name") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
-  const openingTime = String(formData.get("openingTime") ?? "00:00").trim();
-  const closingTime = String(formData.get("closingTime") ?? "24:00").trim();
+  const openingTime = String(formData.get("openingTime") ?? "08:00").trim();
+  let closingTime = String(formData.get("closingTime") ?? "24:00").trim();
+  if (closingTime === "00:00") closingTime = "24:00"; // 午夜＝24:00（內部表示）
   const status = String(formData.get("status") ?? "active");
 
   if (!name) return { error: "請填寫場館名稱" };
@@ -68,6 +69,7 @@ export async function saveCourtAction(
   const name = String(formData.get("name") ?? "").trim();
   const pricePerHour = toInt(String(formData.get("pricePerHour") ?? ""));
   const description = String(formData.get("description") ?? "").trim();
+  const featured = formData.get("featured") === "on";
   const status = String(formData.get("status") ?? "active");
 
   if (!venueId) return { error: "請選擇場館" };
@@ -81,6 +83,7 @@ export async function saveCourtAction(
     name,
     pricePerHour,
     description: description || null,
+    featured,
     status,
   };
 
