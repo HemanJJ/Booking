@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 
 const LINE_AUTHORIZE = "https://access.line.me/oauth2/v2.1/authorize";
 const LINE_TOKEN = "https://api.line.me/oauth2/v2.1/token";
-const LINE_CERTS = "https://access.line.me/oauth2/v2.1/certs";
+const LINE_CERTS = "https://api.line.me/oauth2/v2.1/certs";
 const LINE_PROFILE = "https://api.line.me/v2/profile";
 
 const secret = new TextEncoder().encode(
@@ -78,7 +78,8 @@ export async function exchangeLineCode(code: string): Promise<LineTokenResponse>
     body: body.toString(),
   });
   if (!res.ok) {
-    throw new Error(`LINE token exchange failed: ${res.status}`);
+    const errBody = await res.text();
+    throw new Error(`LINE token exchange failed: ${res.status} ${errBody}`);
   }
   return (await res.json()) as LineTokenResponse;
 }
