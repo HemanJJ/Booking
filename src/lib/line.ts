@@ -83,7 +83,7 @@ export async function exchangeLineCode(code: string): Promise<LineTokenResponse>
   return (await res.json()) as LineTokenResponse;
 }
 
-type LineIdTokenPayload = {
+export type LineIdTokenPayload = {
   sub: string; // LINE user id
   name?: string;
   picture?: string;
@@ -93,10 +93,10 @@ type LineIdTokenPayload = {
   aud?: string;
 };
 
-/** 驗證 id_token 簽章、issuer、audience 與 nonce */
+/** 驗證 id_token 簽章、issuer、audience 與 nonce（nonce 省略時不檢查，供 LIFF 使用） */
 export async function verifyLineIdToken(
   idToken: string,
-  nonce: string
+  nonce?: string
 ): Promise<LineIdTokenPayload> {
   const env = lineEnv();
   const jwks = createRemoteJWKSet(new URL(LINE_CERTS));
@@ -104,7 +104,7 @@ export async function verifyLineIdToken(
     issuer: "https://access.line.me",
     audience: env.channelId,
   });
-  if (payload.nonce !== nonce) {
+  if (nonce && payload.nonce !== nonce) {
     throw new Error("LINE nonce mismatch");
   }
   return payload as unknown as LineIdTokenPayload;
