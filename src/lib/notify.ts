@@ -14,6 +14,7 @@ export async function sendLineAdminNotify(text: string): Promise<void> {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  console.log(`[LINE notify] token=${token ? "有" : "無"}，收件人 ${recipients.length} 位`);
   if (!token || recipients.length === 0) return;
 
   for (const to of recipients) {
@@ -30,7 +31,9 @@ export async function sendLineAdminNotify(text: string): Promise<void> {
         }),
       });
       if (!res.ok) {
-        console.error("[LINE notify] 失敗:", to, res.status, await res.text());
+        console.error(`[LINE notify] 失敗 ${to.slice(0, 6)}… ${res.status} ${await res.text()}`);
+      } else {
+        console.log(`[LINE notify] 成功 ${to.slice(0, 6)}…`);
       }
     } catch (e) {
       console.error("[LINE notify] 錯誤:", e);
