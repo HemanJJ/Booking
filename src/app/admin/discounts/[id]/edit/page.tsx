@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,6 +14,7 @@ export default async function EditDurationDiscountPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireRole(["admin"]);
   const { id } = await params;
   const rule = await prisma.durationDiscount.findUnique({ where: { id } });
   if (!rule) notFound();

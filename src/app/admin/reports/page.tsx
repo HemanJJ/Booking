@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDuration, localDateString } from "@/lib/utils";
@@ -7,9 +8,8 @@ export const metadata: Metadata = {
 };
 
 function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return localDateString(d);
+  const [y, m, d] = localDateString().split("-").map(Number);
+  return localDateString(new Date(Date.UTC(y, m - 1, d - n)));
 }
 
 function shortDate(d: string): string {
@@ -17,8 +17,9 @@ function shortDate(d: string): string {
 }
 
 export default async function AdminReportsPage() {
+  await requireRole(["admin"]);
   const bookings = await prisma.booking.findMany({
-    where: { status: "confirmed" },
+    where: { status: { notIn: ["cancelled", "released"] } },
     orderBy: { date: "asc" },
     include: { court: { include: { venue: true } } },
   });
@@ -27,8 +28,11 @@ export default async function AdminReportsPage() {
 
   const inRange = (since: string | null) =>
     bookings.filter((b) => !since || b.date >= since);
+  // 營收只算「已收款」（cash/linepay/points）；未收款（含固定訂位）不算
   const sumRevenue = (list: typeof bookings) =>
-    list.reduce((s, b) => s + b.totalPrice, 0);
+    list
+      .filter((b) => b.paymentStatus !== "unpaid")
+      .reduce((s, b) => s + b.totalPrice, 0);
 
   const revToday = sumRevenue(inRange(today));
   const rev7 = sumRevenue(inRange(daysAgo(6)));
@@ -62,7 +66,7 @@ export default async function AdminReportsPage() {
       revenue: 0,
     };
     cur.minutes += b.durationMinutes;
-    cur.revenue += b.totalPrice;
+    if (b.paymentStatus !== "unpaid") cur.revenue += b.totalPrice;
     courtMap.set(b.court.id, cur);
   }
   const courtRows = [...courtMap.values()].sort((a, b) => b.minutes - a.minutes);

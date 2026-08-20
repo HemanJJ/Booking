@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -80,6 +81,7 @@ function RuleRow({ r }: { r: RuleItem }) {
 }
 
 export default async function AdminPricingPage() {
+  await requireRole(["admin"]);
   const rules = await prisma.priceRule.findMany({
     orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
     include: { venue: true },

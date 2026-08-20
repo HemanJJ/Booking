@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSlotsForDate } from "@/lib/booking";
+import { getSlotsForDate, releaseExpiredBookings } from "@/lib/booking";
 import { getActiveDiscounts } from "@/lib/pricing";
 
 export async function GET(request: Request): Promise<NextResponse> {
   const url = new URL(request.url);
   const courtId = url.searchParams.get("courtId") ?? "";
   const date = url.searchParams.get("date") ?? "";
+  const excludeBookingId = url.searchParams.get("excludeBookingId") ?? undefined;
 
   if (!courtId || !date) {
     return NextResponse.json({ error: "參數不足" }, { status: 400 });
@@ -23,8 +24,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "場地不存在" }, { status: 404 });
   }
 
+  // 惰性清理：釋放逾期未付款訂位
+  await releaseExpiredBookings();
+
   const [slots, discounts] = await Promise.all([
-    getSlotsForDate(courtId, date),
+    getSlotsForDate(courtId, date, excludeBookingId),
     getActiveDiscounts(court.venueId),
   ]);
   return NextResponse.json({

@@ -14,21 +14,31 @@ export function formatDate(date: string): string {
   return `${y}/${m}/${d}`;
 }
 
-/** 伺服器本地日期字串 YYYY-MM-DD */
+/** 台灣時區偏移（Asia/Taipei = UTC+8，無日光節約） */
+export const TAIWAN_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+const taiwanDateFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Taipei",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** 台灣（Asia/Taipei）日期字串 YYYY-MM-DD —— 伺服器 UTC 或瀏覽器任意時區都正確 */
 export function localDateString(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const p = taiwanDateFmt.formatToParts(d);
+  const y = p.find((x) => x.type === "year")!.value;
+  const m = p.find((x) => x.type === "month")!.value;
+  const day = p.find((x) => x.type === "day")!.value;
   return `${y}-${m}-${day}`;
 }
 
-/** 往後 n 天的日期字串陣列（含今天） */
+/** 往後 n 天的「台灣日期」字串陣列（含今天） */
 export function nextDates(days: number): string[] {
   const out: string[] = [];
-  const now = new Date();
+  const [y, m, d] = localDateString().split("-").map(Number);
   for (let i = 0; i < days; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-    out.push(localDateString(d));
+    out.push(localDateString(new Date(Date.UTC(y, m - 1, d + i))));
   }
   return out;
 }

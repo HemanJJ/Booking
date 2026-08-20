@@ -13,6 +13,7 @@ import {
 import { createBooking, cancelBooking } from "@/lib/booking";
 import { sendLineAdminNotify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
+import { logBookingEvent } from "@/lib/audit";
 
 export type FormState = { error?: string; ok?: boolean };
 
@@ -86,6 +87,14 @@ export async function createBookingAction(
   const member = await getCurrentMember();
   if (!member) return { error: "請先登入後再預約" };
 
+  const fullMember = await prisma.member.findUnique({
+    where: { id: member.id },
+    select: { banned: true },
+  });
+  if (fullMember?.banned) {
+    return { error: "您的帳號已停權，請洽場館人員處理" };
+  }
+
   const courtId = String(formData.get("courtId") ?? "");
   const date = String(formData.get("date") ?? "");
   const startTime = String(formData.get("startTime") ?? "");
@@ -106,8 +115,15 @@ export async function createBookingAction(
     };
   }
 
+  await logBookingEvent({
+    bookingId: booking.id,
+    actorName: member.name,
+    action: "create",
+    detail: `會員下單｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}`,
+  });
   await sendLineAdminNotify(
-    `🟢 新訂位｜${member.name}｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}`
+    `🟢 新訂位｜${member.name}｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}`,
+    "quiet"
   );
 
   redirect(`/bookings/success?id=${booking.id}`);
@@ -123,8 +139,15 @@ export async function cancelBookingAction(
   const bookingId = String(formData.get("bookingId") ?? "");
   try {
     const cancelled = await cancelBooking(bookingId, member.id);
+    await logBookingEvent({
+      bookingId,
+      actorName: member.name,
+      action: "cancel",
+      detail: `會員取消｜${cancelled.venueName} ${cancelled.courtName}｜${cancelled.date} ${cancelled.startTime}-${cancelled.endTime}`,
+    });
     await sendLineAdminNotify(
-      `🔴 取消訂位｜${member.name}｜${cancelled.venueName} ${cancelled.courtName}｜${cancelled.date} ${cancelled.startTime}-${cancelled.endTime}`
+      `🔴 取消訂位｜${member.name}｜${cancelled.venueName} ${cancelled.courtName}｜${cancelled.date} ${cancelled.startTime}-${cancelled.endTime}`,
+      "instant"
     );
   } catch (e) {
     return {

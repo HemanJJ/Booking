@@ -17,6 +17,8 @@ export type WeekBooking = {
   totalPrice?: number;
   avgHourlyPrice?: number;
   memberName?: string;
+  courtName?: string;
+  paymentStatus?: string;
 };
 
 function addDays(d: Date, n: number): Date {
@@ -42,9 +44,13 @@ function blockColor(mode: "admin" | "public", b: WeekBooking): string {
 export default function WeekSchedule({
   courts,
   mode,
+  onBookingClick,
+  refreshKey = 0,
 }: {
   courts: WeekCourt[];
   mode: "admin" | "public";
+  onBookingClick?: (b: WeekBooking) => void;
+  refreshKey?: number;
 }) {
   const [weekStart, setWeekStart] = useState<Date>(startOfToday);
   const [bookings, setBookings] = useState<WeekBooking[]>([]);
@@ -57,24 +63,28 @@ export default function WeekSchedule({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/bookings/week?start=${startStr}&days=7`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled) {
-          setBookings((d.bookings as WeekBooking[]) ?? []);
-          setLoadedStart(startStr);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setBookings([]);
-          setLoadedStart(startStr);
-        }
-      });
+    const load = () =>
+      fetch(`/api/bookings/week?start=${startStr}&days=7`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!cancelled) {
+            setBookings((d.bookings as WeekBooking[]) ?? []);
+            setLoadedStart(startStr);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setBookings([]);
+            setLoadedStart(startStr);
+          }
+        });
+    load();
+    const timer = setInterval(load, 30_000); // 每 30 秒自動刷新
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
-  }, [startStr]);
+  }, [startStr, refreshKey]);
 
   const loading = loadedStart !== startStr;
   const gridCols = "140px repeat(7, minmax(0, 1fr))";
@@ -183,9 +193,13 @@ export default function WeekSchedule({
                       dayBookings.map((b) => (
                         <div
                           key={b.id}
+                          onClick={onBookingClick ? () => onBookingClick(b) : undefined}
+                          role={onBookingClick ? "button" : undefined}
                           className={cn(
                             "rounded px-1.5 py-1 text-[11px] leading-tight",
-                            blockColor(mode, b)
+                            blockColor(mode, b),
+                            onBookingClick &&
+                              "cursor-pointer hover:ring-2 hover:ring-emerald-400"
                           )}
                           title={`${b.startTime}–${b.endTime}${
                             b.memberName ? ` · ${b.memberName}` : ""

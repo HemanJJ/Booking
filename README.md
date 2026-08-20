@@ -26,7 +26,7 @@ npx prisma migrate dev --name init
 # 3. 產生 Prisma Client（v7 不會自動 generate）
 npx prisma generate
 
-# 4. 灌入種子資料（6 個場地 + 示範會員）
+# 4. 灌入種子資料（7 面場 + 示範會員）
 npx prisma db seed
 
 # 5. 啟動開發伺服器
@@ -129,46 +129,47 @@ npx tsx scripts/smoke.ts   # 防重疊訂位驗證
 
 ## 部署到 Vercel + Neon（生產）
 
-程式已內建「依 `DATABASE_URL` 自動切換」：`file:` 開頭走 SQLite（本地），`postgres` 開頭走 Neon driver adapter。部署步驟：
+**一鍵部署：`./deploy.sh`**（讀取專案根目錄 `.vercel-token`，免每次登入）。
 
-1. **申請 Neon 資料庫**：到 [Neon](https://neon.tech) 註冊 → 建立專案 → 複製 **Pooled connection string**（形如 `postgresql://…-pooler…neon.tech/…`）。
-2. **同步資料表＋種子**：把連線字串貼到本地 `.env` 的 `DATABASE_URL` 後執行：
-   ```bash
-   npm run db:push      # 建立資料表（首次部署用 db push 即可）
-   npx prisma db seed   # 建立場館/場地/管理員
-   ```
-3. **申請 Vercel**：到 [Vercel](https://vercel.com) 用 GitHub 登入 → Import 這個 repo。
-4. **設定環境變數**（Vercel 專案 → Settings → Environment Variables）：
+- 首次：到 https://vercel.com/account/tokens → Create Token → 到期選「No Expiration」→ 存到 `.vercel-token`（已 gitignore）。
+- 改「程式」：直接 `./deploy.sh` 即可。
+- 改「資料表欄位」：**除部署外，還要手動 ALTER 到 Neon**（見下 ⚠️）。
 
-   | 變數 | 值 |
-   |------|-----|
-   | `DATABASE_URL` | Neon 的 Pooled connection string |
-   | `SESSION_SECRET` | 長隨機字串 |
-   | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | 後台帳號（請設強密碼） |
-   | `LINE_CHANNEL_ID` / `LINE_CHANNEL_SECRET` | LINE 憑證 |
-   | `LINE_CALLBACK_URL` | `https://你的網域/api/auth/line/callback` |
-   | `NEXT_PUBLIC_APP_URL` | 你的正式網址 |
-
-5. **部署**：Vercel 會跑 `npm run build`（已含 `prisma generate && next build`，見 `vercel.json`）。
-6. **LINE Callback**：到 LINE Developers 後台把 Callback URL 改成正式網址。
+> ⚠️ **Neon 與租拍/穿線「共用同一個資料庫」，千萬別跑 `npx prisma db push`**（會把租拍/穿線的表 drop 掉）。改 schema 的正確做法：本地 `npx prisma migrate dev`；生產用 `Pool` 跑「只 ADD COLUMN / CREATE TABLE」的 ALTER。詳見 `docs/obsidian/15-營運維護.md`。
 
 > 修改資料模型時，請**同步更新** `prisma/schema.prisma` 與 `prisma/schema.postgres.prisma`（兩者只有 datasource provider 不同）。
 
 ## 管理後台
 
-登入管理員帳號後，右上角會出現「管理後台」，或直接到 `/admin`。包含：
+登入管理員（或員工）帳號後，右上角會出現「管理後台」，或直接到 `/admin`。包含：
 
-- **儀表板**：場館/場地/訂位/會員統計 + 最新訂位
-- **場館管理**：場館新增/編輯/啟停（名稱、地址、電話、24h 營業時間）
-- **場地管理**：場地新增/編輯/啟停（所屬場館、名稱、時價）
-- **價位規則**：尖峰/離峰固定週規則＋特定日期（國定假日/颱風假）整日價
-- **時長折扣**：滿 N 分鐘折 X 元，可指定僅限某時價（如僅尖峰）
-- **訂位管理**：週表（未來 7 日色塊總覽）+ 訂位列表 + 取消
-- **會員管理**：會員列表 + 設為/取消管理員
+- **儀表板**：今日總覽 4 卡（訂位/收入/空場/未收款）＋ 今日 7 面場時間軸（紅線=現在）
+- **代客下單 / 改單**：代客人下單、改時段/時長/換場
+- **排班拖移**：視覺化時間表，拖色塊＝改時間/換面場，點一下＝快速編輯（＋30分/取消/完整改單）
+- **固定訂位**：每週固定團，自動生成未來 4 週訂位
+- **收款標記**：未收 / 已收現金 / LINE Pay / 點數，一鍵切換
+- **異動紀錄（logfile）**：誰、何時、改什麼，全部留軌跡
+- **場館 / 場地 / 價位規則 / 時長折扣**：設定
+- **報表**：營收、訂位趨勢、場地使用率、時段熱門度
+- **會員管理**：角色（會員/員工/管理員）、停權/解鎖
+
+### 角色權限（3 層）
+
+| 角色 | 進後台 | 能做的事 |
+|------|:---:|------|
+| `member` 會員 | ❌ | 前台訂位、看自己訂位 |
+| `staff` 員工 | ✅ 櫃台作業 | 儀表板、代客下單/改單/拖移、收款、固定訂位 |
+| `admin` 館長 | ✅ 管理後台 | 全部（報表、價位、場館場地、會員、異動紀錄） |
+
+## 監控與維運
+
+- **健康檢查**：`GET /api/health`（測資料庫連線，正常 200 / DB 掛 500）。可用 [UptimeRobot](https://uptimerobot.com) 免費每 5 分鐘 ping，掛了寄 LINE/email。
+- **錯誤 log**：Vercel Dashboard → 專案 → Logs。
+- **時區**：已固定 Asia/Taipei（`lib/utils.ts`），伺服器 UTC 也不會錯。
 
 ## 下一步（未完成項目）
 
-1. **金流**：目前無金流，訂位直接「已確認」。接金流時需加入付款狀態機 + 綠界/藍新等串接。
-2. **課程 / 教練 / 商城 / 最新消息**：模型已備好，補前台頁面 + 對應後台即可。
-3. **LINE 帳號綁定**：LINE 首次登入與既有 Email 帳號合併的流程。
-4. **時區**：目前以伺服器本地時間判斷「已過去的時段」，正式部署（尤其台灣 UTC+8）應明確固定時區。
+1. **LINE Pay 金流**：程式骨架已就緒（`/api/linepay/*`），等申請到 LINE Pay 商家憑證即可開通。
+2. **課程 / 教練 / 商城 / 最新消息**：模型已備好，補前台 + 後台。
+3. **no-show 停權自動化**：目前停權為後台手動，3 次 no-show 自動停權尚未實作。
+4. **前台「查閱場地」點選訂位**（P2）：拉低客人使用門檻。

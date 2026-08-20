@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
@@ -94,6 +95,18 @@ export async function getCurrentMember(): Promise<SessionMember | null> {
 export async function isAdmin(): Promise<boolean> {
   const member = await getCurrentMember();
   return member?.role === "admin";
+}
+
+/** 頁面層級權限：非允許角色即導走（後台敏感頁用 requireRole(["admin"])） */
+export async function requireRole(
+  allowed: Array<"admin" | "staff" | "member">
+): Promise<SessionMember> {
+  const member = await getCurrentMember();
+  if (!member) redirect("/account/login?returnTo=%2Fadmin");
+  if (!allowed.includes(member.role as "admin" | "staff" | "member")) {
+    redirect("/admin");
+  }
+  return member;
 }
 
 export function hashPassword(password: string): Promise<string> {

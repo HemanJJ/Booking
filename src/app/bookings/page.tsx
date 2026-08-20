@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMember } from "@/lib/auth";
 import { formatPrice, formatDate, formatDuration, weekdayOf } from "@/lib/utils";
+import { linePayConfigured } from "@/lib/linepay";
 import CancelButton from "@/components/CancelButton";
+import LinePayButton from "@/components/LinePayButton";
 
 export const metadata: Metadata = {
   title: "我的訂位",
@@ -12,8 +14,9 @@ export const metadata: Metadata = {
 
 const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
   confirmed: { text: "已確認", cls: "bg-emerald-100 text-emerald-700" },
-  pending: { text: "待付款", cls: "bg-amber-100 text-amber-700" },
+  pending: { text: "保留中・待付款", cls: "bg-amber-100 text-amber-700" },
   cancelled: { text: "已取消", cls: "bg-slate-100 text-slate-500" },
+  released: { text: "已釋放", cls: "bg-rose-100 text-rose-600" },
 };
 
 export default async function MyBookingsPage() {
@@ -27,6 +30,8 @@ export default async function MyBookingsPage() {
     orderBy: [{ date: "desc" }, { startTime: "desc" }],
     include: { court: { include: { venue: true } } },
   });
+
+  const linePayEnabled = linePayConfigured();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -90,7 +95,15 @@ export default async function MyBookingsPage() {
                     >
                       {s.text}
                     </span>
-                    {b.status !== "cancelled" && (
+                    {b.status === "pending" && (
+                      <>
+                        <span className="text-xs text-amber-600">
+                          請於 24 小時內繳費，否則時段自動釋放
+                        </span>
+                        <LinePayButton bookingId={b.id} enabled={linePayEnabled} />
+                      </>
+                    )}
+                    {b.status !== "cancelled" && b.status !== "released" && (
                       <CancelButton bookingId={b.id} />
                     )}
                   </div>

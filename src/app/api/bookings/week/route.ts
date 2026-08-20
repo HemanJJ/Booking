@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentMember } from "@/lib/auth";
 import { localDateString } from "@/lib/utils";
 import { resolveSlotPrice, type PriceRuleLike } from "@/lib/pricing";
+import { releaseExpiredBookings } from "@/lib/booking";
 
 /** 由開始時間＋時長還原該訂位佔用的 30 分時段起點 */
 function slotStarts(startTime: string, durationMinutes: number): string[] {
@@ -36,15 +37,18 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "start 參數錯誤" }, { status: 400 });
   }
 
+  // 惰性清理：釋放逾期未付款訂位，確保時段正確反映
+  await releaseExpiredBookings();
+
   const [y, m, d] = start.split("-").map(Number);
   const end = localDateString(new Date(y, m - 1, d + days - 1));
 
   const current = await getCurrentMember();
-  const isAdmin = current?.role === "admin";
+  const isAdmin = current?.role === "admin" || current?.role === "staff";
 
   const bookings = await prisma.booking.findMany({
     where: {
-      status: { not: "cancelled" },
+      status: { notIn: ["cancelled", "released"] },
       date: { gte: start, lte: end },
     },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
@@ -91,11 +95,13 @@ export async function GET(request: Request): Promise<NextResponse> {
       return {
         id: b.id,
         courtId: b.courtId,
+        courtName: b.court.name,
         date: b.date,
         startTime: b.startTime,
         endTime: b.endTime,
         durationMinutes: b.durationMinutes,
         status: b.status,
+        paymentStatus: isAdmin ? b.paymentStatus : undefined,
         memberName: isAdmin ? b.member.name : undefined,
         totalPrice: isAdmin ? b.totalPrice : undefined,
         avgHourlyPrice: isAdmin ? avg : undefined,

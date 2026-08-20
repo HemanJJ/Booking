@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminCourtsPage() {
+  await requireRole(["admin"]);
   const courts = await prisma.court.findMany({
     orderBy: [{ name: "asc" }],
     include: { venue: true },

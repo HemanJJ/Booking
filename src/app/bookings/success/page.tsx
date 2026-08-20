@@ -24,14 +24,20 @@ export default async function BookingSuccessPage({
 
   if (!booking) notFound();
 
+  const paid = booking.status === "confirmed";
+
   return (
     <div className="mx-auto max-w-lg px-4 py-16 text-center">
       <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-3xl">
-        ✅
+        {paid ? "🎉" : "✅"}
       </div>
-      <h1 className="mt-6 text-2xl font-bold">訂位成功！</h1>
+      <h1 className="mt-6 text-2xl font-bold">
+        {paid ? "付款成功，訂位已確認！" : "訂位成功！"}
+      </h1>
       <p className="mt-2 text-slate-600">
-        我們已為您保留場地時段，請準時到場。
+        {paid
+          ? "場地時段已為您確認，請準時到場。"
+          : "已為您保留場地時段（保留中），請於 24 小時內完成繳費，否則時段將自動釋放。"}
       </p>
 
       <div className="mt-8 space-y-2 rounded-2xl border border-slate-200 bg-white p-6 text-left text-sm">

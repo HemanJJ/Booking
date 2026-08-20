@@ -45,7 +45,7 @@ export default async function Header() {
               修改密碼
             </Link>
           )}
-          {member?.role === "admin" && (
+          {(member?.role === "admin" || member?.role === "staff") && (
             <Link
               href="/admin"
               className="rounded-md px-3 py-2 font-semibold text-emerald-700 hover:bg-emerald-50"

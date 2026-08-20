@@ -7,14 +7,27 @@
 
 const LINE_PUSH_URL = "https://api.line.me/v2/bot/message/push";
 
-export async function sendLineAdminNotify(text: string): Promise<void> {
+/**
+ * 通知優先級（PRD 通知分級）：
+ * - "instant"：取消/變更/收款等需立刻讓老闆知道的事件 → 立即 push。
+ * - "quiet"  ：新訂位等低頻事件 → 保留欄位供日後「每日彙整一封」或去重；
+ *              目前仍立即 push（維持既有行為），彙整為後續功能。
+ */
+export type NotifyPriority = "instant" | "quiet";
+
+export async function sendLineAdminNotify(
+  text: string,
+  priority: NotifyPriority = "instant"
+): Promise<void> {
   const token = process.env.LINE_MESSAGING_ACCESS_TOKEN;
   const raw = process.env.LINE_ADMIN_USER_IDS || process.env.LINE_ADMIN_USER_ID || "";
   const recipients = raw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  console.log(`[LINE notify] token=${token ? "有" : "無"}，收件人 ${recipients.length} 位`);
+  console.log(
+    `[LINE notify] token=${token ? "有" : "無"}，收件人 ${recipients.length} 位，優先級=${priority}`
+  );
   if (!token || recipients.length === 0) return;
 
   for (const to of recipients) {

@@ -29,10 +29,13 @@ model Member {
   lineUserId     String?  @unique
   lineName       String?
   linePictureUrl String?
+  points         Int      @default(0) // 會員點數（點數扣抵，未來功能）
+  banned         Boolean  @default(false) // no-show 停權（後台人工解鎖）
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   bookings          Booking[]
+  recurringBookings RecurringBooking[]
   courseEnrollments CourseEnrollment[]
   orders            Order[]
 }
@@ -118,6 +121,7 @@ model Court {
   facilities   CourtFacility[]
   bookings     Booking[]
   bookingSlots BookingSlot[]
+  recurringBookings RecurringBooking[]
 }
 
 model CourtImage {
@@ -152,7 +156,13 @@ model Booking {
   durationMinutes Int // 30 / 60 / 90 / 120 …
   totalPrice      Int // 折扣後總價
   discountAmount  Int     @default(0) // 時長折扣折抵金額
-  status     String   @default("confirmed") // pending | confirmed | cancelled
+  status     String   @default("pending") // pending(保留中) | confirmed(已確認) | cancelled(已取消) | released(逾期釋放)
+  paymentStatus String   @default("unpaid") // unpaid(未收) | cash(已收現金) | linepay(LINE Pay) | points(點數)
+  reservedAt DateTime? // 保留起始時間（24h 內需繳費，否則自動釋放）
+  paidAt     DateTime? // 繳費時間
+  source     String   @default("member") // member(會員) | admin(代客下單) | recurring(固定訂位)
+  note       String? // 備註（代客下單臨時姓名/電話等）
+  recurringId String? // 來源「固定訂位」系列 id（null = 一般訂位）
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -162,6 +172,7 @@ model Booking {
 
   @@index([courtId, date])
   @@index([memberId])
+  @@index([recurringId])
 }
 
 model BookingSlot {
@@ -176,6 +187,49 @@ model BookingSlot {
 
   // 資料庫層級互斥：同場地、同日期、同時段唯一
   @@unique([courtId, date, startTime])
+}
+
+// ============================================================
+// 固定訂位 RecurringBooking（每週固定團，例如球隊/課程）
+//  - 規則存這，每天自動生成「未來 4 週」的實際 Booking
+//  - 生成的 Booking 帶 recurringId，方便整系列取消
+// ============================================================
+model RecurringBooking {
+  id              String   @id @default(cuid())
+  courtId         String
+  memberId        String
+  dayOfWeek       Int      // 0=日 1=一 2=二 3=三 4=四 5=五 6=六
+  startTime       String   // "HH:MM"
+  durationMinutes Int      // 30 的倍數（30~240）
+  startDate       String   // "YYYY-MM-DD" 起始
+  endDate         String?  // "YYYY-MM-DD" 終止；null = 長期（手動停）
+  status          String   @default("active") // active | stopped
+  note            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  court  Court  @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([courtId])
+  @@index([status])
+}
+
+// ============================================================
+// 訂位稽核紀錄 BookingLog（logfile 機制）
+//  - 記錄「誰在何時對哪筆訂位做了什麼變更」（舊→新摘要）
+//  - bookingId 可為 null（訂位被刪除後仍保留稽核軌跡）
+// ============================================================
+model BookingLog {
+  id        String   @id @default(cuid())
+  bookingId String?
+  actorName String // 操作者：管理員 / 會員姓名 / 系統
+  action    String // create | update | extend | cancel | pay | unpaid | release | linepay
+  detail    String // 變更摘要（含舊→新）
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([createdAt])
 }
 
 // ============================================================

@@ -1,0 +1,4 @@
+date,startTime,durationMinutes,courtName,memberName,phone,payCash
+2026-08-20,20:00,120,1 號場,王小明,0912345678,是
+2026-08-20,20:00,60,2 號場,李大仁,0987654321,否
+2026-08-21,10:00,90,3 號場,陳美美,,是

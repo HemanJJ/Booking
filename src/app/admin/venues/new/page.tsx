@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { requireRole } from "@/lib/auth";
 import VenueForm from "@/components/admin/VenueForm";
 
 export const metadata: Metadata = {
   title: "新增場館",
 };
 
-export default function NewVenuePage() {
+export default async function NewVenuePage() {
+  await requireRole(["admin"]);
   return (
     <div className="max-w-xl">
       <nav className="mb-4 text-sm text-slate-500">
