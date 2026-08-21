@@ -2,7 +2,6 @@ import { prisma } from "./prisma";
 import { localDateString, nextDates, TAIWAN_OFFSET_MS } from "./utils";
 import { getActiveRules, resolveSlotPrice, computeBookingTotal } from "./pricing";
 import { logBookingEvent } from "./audit";
-import { sendLineAdminNotify } from "./notify";
 
 /** 預約最小單位（分鐘） */
 export const SLOT_MINUTES = 30;
@@ -438,7 +437,6 @@ export async function generateRecurringBookings(): Promise<number> {
     include: { court: true },
   });
   let created = 0;
-  const skipped: string[] = [];
 
   const [todayY, todayM, todayD] = localDateString().split("-").map(Number);
   for (const rule of rules) {
@@ -474,19 +472,13 @@ export async function generateRecurringBookings(): Promise<number> {
         });
         created++;
       } catch {
-        skipped.push(`${rule.court.name} ${date} ${rule.startTime}`);
+        // 時段被佔（客人先訂了）→ 靜默跳過，不通知
       }
     }
   }
 
-  if (skipped.length) {
-    await sendLineAdminNotify(
-      `⚠️ 固定訂位跳過（時段被佔）：\n${skipped.slice(0, 10).join("\n")}${
-        skipped.length > 10 ? `\n…共 ${skipped.length} 筆` : ""
-      }`,
-      "instant"
-    );
-  }
+  // 固定訂位被佔 = 正常（客人先訂了），靜默跳過，不通知。
+  // lock（DB 唯一鍵）已保證不重複訂位，無需人工處理。
   return created;
 }
 

@@ -17,7 +17,7 @@ created: 2026-08-20
 |----|------|------|
 | 雲端（web） | `code/smartlocker/web` | ✅ 上線（含穿線 API） |
 | 規格文件 | `code/stringing/` | ✅ 定稿＋已 push |
-| 硬體 | Win kiosk＋GoDex 印表機＋RS-485 鎖控板 | ⏳ 現場另做 |
+| 硬體 | **Win10** kiosk＋GoDex 印表機＋RS-485 鎖控板 | ⏳ 現場另做（方案 A：畫面住雲端）|
 
 - 雲端網址：`https://smartlocker-alpha.vercel.app`
 - 部署：`cd code/smartlocker/web && ./deploy.sh`（Root Directory 已設 `web`）
@@ -63,7 +63,8 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 |------|------|
 | 雲端閉環（資料模型/下單/後台/列印佇列/LINE 通知） | ✅ 完成、已上線（25/25 本地＋9/9 Neon e2e） |
 | 列印（雲端側） | ✅ 完成；GoDex 實體對位待硬體測 |
-| 格口控制（RS-485） | ⏳ 未動工 |
+| 格口控制（RS-485） | ⏳ 未動工（串接方案見 [[18-運動商城與進銷存]]／販售規格）|
+| 販售＋進銷存＋配貨 | ✅ 2026-08-21 完成（見 [[18-運動商城與進銷存]]）|
 
 ## 注意 / 地雷
 

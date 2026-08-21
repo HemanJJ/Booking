@@ -205,6 +205,7 @@ model RecurringBooking {
   endDate         String?  // "YYYY-MM-DD" 終止；null = 長期（手動停）
   status          String   @default("active") // active | stopped
   note            String?
+  skipNotifiedAt  DateTime? // 上次「跳過衝突」已通知時間（去重用，避免每小時重複吵）
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
