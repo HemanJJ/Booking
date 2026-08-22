@@ -77,11 +77,36 @@ export default function DeskBoard({
   const startCol = 16 * 60; // 顯示 16:00 起（櫃台晚間高峰），可改
 
   return (
-    <div style={{ fontFamily: '-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif' }}>
+    <div style={{ fontFamily: '-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif', minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* 頂部品牌列（全螢幕櫃台用） */}
+      <div
+        style={{
+          background: "#064e3b", color: "#fff", padding: "12px 16px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 20, fontWeight: 800 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/dearfly-logo.png" alt="Dearfly" style={{ height: 32 }} />
+          Dearfly 櫃台
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600 }}>
+          {today.slice(5)}（{weekdayOf(today)}）
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: 16 }}>
       {/* ===== 首頁 ===== */}
       {tab === "home" && (
         <div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 10,
+              marginBottom: 14,
+            }}
+          >
             <Stat n={String(stats.totalBookings)} l="今日訂位" color="#059669" />
             <Stat n={fmtPrice(stats.revenue)} l="已收款" color="#d97706" />
             <Stat n="－" l="空場中" color="#2563eb" />
@@ -278,6 +303,7 @@ export default function DeskBoard({
           onDone={() => { setOpenCourt(null); setOpenStart(null); }}
         />
       )}
+      </div>
     </div>
   );
 }
