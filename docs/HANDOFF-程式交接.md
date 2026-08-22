@@ -74,6 +74,7 @@
 ### D. 排班拖移強化 ✅ 已完成（2026-08-22）
 
 - ✅ **修舊瀏覽器相容**：ScheduleBoard 原本全用 Pointer Events（Safari<13/舊 Edge/IE 不支援 → 點一下、拖移全失效）。改為 `supportsPointer` 偵測：支援走 pointer、不支援自動退回 mouse events。
+- ✅ **修快速點擊 race（2026-08-22 二修）**：move/up listener 原本用 `useEffect([drag])` 掛載，快速點擊時 pointerup 比 effect 早到 → 事件丟失（點一下沒反應、沒拖拉線）。改為 **pointerdown/mousedown 當下同步 `attachListeners()`**、up 時 detach（moveRef/upRef 每次 render 更新）。線上實測快速點擊/拖移/ghost 全通。
 - ✅ **拖右緣＝調時長**：色塊右緣加把手，橫拖 30 分為單位（30~240，防重疊＋營業時間檢查），`adminResizeBookingAction`。
 - ✅ **點空白時段＝頁內代客下單**：QuickCreateModal（選會員/臨時客人＋時長＋收款），預填場地/日期/時段，送出後 `returnTo=/admin/schedule` 留在原頁。
 - ✅ **時長調整允許過去訂位**（`updateBooking` 加 `allowPast`），錯誤不再靜默吞掉（throw 讓 modal 顯示原因）。
