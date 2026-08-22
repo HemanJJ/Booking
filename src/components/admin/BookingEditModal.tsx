@@ -77,13 +77,36 @@ export default function BookingEditModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/40"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        overflowY: "auto",
+        backgroundColor: "rgba(0,0,0,0.45)",
+      }}
       onClick={onClose}
     >
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div
+        style={{
+          display: "flex",
+          minHeight: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 16,
+        }}
+      >
         <div
-          className="my-auto w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
-          style={{ maxHeight: "85vh", overflowY: "auto" }}
+          style={{
+            margin: "auto",
+            width: "100%",
+            maxWidth: 384,
+            borderRadius: 16,
+            backgroundColor: "#fff",
+            padding: 20,
+            boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+            maxHeight: "85vh",
+            overflowY: "auto",
+          }}
           onClick={(e) => e.stopPropagation()}
         >
         <div className="mb-3 flex items-start justify-between">
