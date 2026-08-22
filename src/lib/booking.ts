@@ -254,6 +254,7 @@ export type UpdateBookingInput = {
   date: string;
   startTime: string;
   durationMinutes: number;
+  allowPast?: boolean; // 調整時長等後台補登用（跳過「過去時段」檢查）
 };
 
 /** 改單：換時段 / 改時長 / 換面場（沿用資料庫層級防重疊） */
@@ -279,7 +280,8 @@ export async function updateBooking(input: UpdateBookingInput): Promise<{
       input.courtId,
       input.date,
       input.startTime,
-      input.durationMinutes
+      input.durationMinutes,
+      input.allowPast ?? false
     );
 
   try {

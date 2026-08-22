@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn, localDateString, weekdayOf } from "@/lib/utils";
 import BookingEditModal, { type ModalBooking } from "./BookingEditModal";
-import { adminMoveBookingAction } from "@/app/admin/actions";
+import QuickCreateModal from "./QuickCreateModal";
+import {
+  adminMoveBookingAction,
+  adminResizeBookingAction,
+} from "@/app/admin/actions";
+import type { MemberOption } from "./AdminCreateBookingForm";
 
 type Court = {
   id: string;
@@ -27,11 +32,25 @@ type BoardBooking = {
   paymentStatus?: string;
 };
 
+type MouseLike = {
+  clientX: number;
+  clientY: number;
+  preventDefault: () => void;
+  stopPropagation?: () => void;
+};
+
 type DragState = {
   booking: BoardBooking;
   grabOffsetX: number;
   startX: number;
   startY: number;
+  moved: boolean;
+};
+
+type ResizeState = {
+  booking: BoardBooking;
+  startX: number;
+  origDuration: number;
   moved: boolean;
 };
 
@@ -42,6 +61,11 @@ const LABEL = 120; // 左側場地欄
 const ROW_H = 56; // 每列高
 const HEADER_H = 28; // 時間表頭高
 const SLOT = 30;
+const MAX_DUR = 240; // 最長 4 小時
+
+// 舊瀏覽器不支援 PointerEvent（Safari<13、舊 Edge/IE）→ 退回 Mouse Events
+const supportsPointer =
+  typeof window !== "undefined" && "PointerEvent" in window;
 
 function toMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -60,19 +84,38 @@ function nowMinutes(): number {
   const n = new Date();
   return n.getHours() * 60 + n.getMinutes();
 }
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
 
-export default function ScheduleBoard({ courts }: { courts: Court[] }) {
+export default function ScheduleBoard({
+  courts,
+  members,
+}: {
+  courts: Court[];
+  members: MemberOption[];
+}) {
   const [date, setDate] = useState(() => localDateString(new Date()));
   const [bookings, setBookings] = useState<BoardBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [nowMin, setNowMin] = useState(nowMinutes);
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [resize, setResize] = useState<ResizeState | null>(null);
+  const [resizeDur, setResizeDur] = useState<number | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
   const [selected, setSelected] = useState<BoardBooking | null>(null);
+  const [quickCreate, setQuickCreate] = useState<{
+    courtId: string;
+    courtName: string;
+    venueName: string;
+    startTime: string;
+  } | null>(null);
   const [error, setError] = useState("");
 
   const boardRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const resizeRef = useRef<ResizeState | null>(null);
+  const resizeDurRef = useRef<number | null>(null);
   const targetRef = useRef<Target | null>(null);
 
   const openMin = useMemo(
@@ -123,7 +166,12 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
     setDate(localDateString(d));
   }
 
-  function isOverlap(courtId: string, startMin: number, dur: number, excludeId: string) {
+  function isOverlap(
+    courtId: string,
+    startMin: number,
+    dur: number,
+    excludeId: string
+  ) {
     return active.some(
       (b) =>
         b.id !== excludeId &&
@@ -133,7 +181,8 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
     );
   }
 
-  function onPointerDown(e: React.PointerEvent, b: BoardBooking) {
+  // ===== 開始拖移（改時間 / 換場） =====
+  function onGrabDown(e: MouseLike, b: BoardBooking) {
     e.preventDefault();
     const rect = boardRef.current!.getBoundingClientRect();
     const leftPx = ((toMin(b.startTime) - openMin) / SLOT) * CELL;
@@ -150,15 +199,57 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
     setError("");
   }
 
-  // 拖移期間監聽 window 的 pointermove/up（比 setPointerCapture 穩）
+  // ===== 開始拉時長（右緣把手） =====
+  function onResizeDown(e: MouseLike, b: BoardBooking) {
+    e.preventDefault();
+    e.stopPropagation?.();
+    const r: ResizeState = {
+      booking: b,
+      startX: e.clientX,
+      origDuration: b.durationMinutes ?? 30,
+      moved: false,
+    };
+    resizeRef.current = r;
+    setResize(r);
+    resizeDurRef.current = r.origDuration;
+    setResizeDur(r.origDuration);
+    setError("");
+  }
+
+  // 拖移/拉長期間監聽 window 的 move/up（Pointer 或 Mouse，依瀏覽器支援）
   useEffect(() => {
-    if (!drag) return;
-    const move = (e: PointerEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
+    const move = (e: MouseEvent | PointerEvent) => {
       const rect = boardRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const moved = d.moved || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 5;
+
+      // ---- 拉時長 ----
+      const rz = resizeRef.current;
+      if (rz) {
+        const moved = rz.moved || Math.abs(e.clientX - rz.startX) > 3;
+        if (!moved) return;
+        const deltaSlots = Math.round((e.clientX - rz.startX) / CELL);
+        const slots = clamp(
+          rz.origDuration / SLOT + deltaSlots,
+          SLOT / SLOT,
+          MAX_DUR / SLOT
+        );
+        const newDur = slots * SLOT;
+        const startMin = toMin(rz.booking.startTime);
+        const ok =
+          startMin + newDur <= closeMin &&
+          !isOverlap(rz.booking.courtId, startMin, newDur, rz.booking.id);
+        resizeRef.current = { ...rz, moved: true };
+        setResize({ ...rz, moved: true });
+        resizeDurRef.current = ok ? newDur : rz.booking.durationMinutes ?? 30;
+        setResizeDur(resizeDurRef.current);
+        return;
+      }
+
+      // ---- 拖移 ----
+      const d = dragRef.current;
+      if (!d) return;
+      const moved =
+        d.moved || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 5;
       if (!moved) return;
       const dur = d.booking.durationMinutes ?? 30;
       const innerX = e.clientX - rect.left - LABEL;
@@ -167,7 +258,10 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
       startMin = Math.max(openMin, Math.min(startMin, closeMin - dur));
       const courtIndex = Math.max(
         0,
-        Math.min(courts.length - 1, Math.floor((e.clientY - rect.top - HEADER_H) / ROW_H))
+        Math.min(
+          courts.length - 1,
+          Math.floor((e.clientY - rect.top - HEADER_H) / ROW_H)
+        )
       );
       const court = courts[courtIndex];
       const valid =
@@ -177,7 +271,14 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
       targetRef.current = { courtIndex, startMin, valid };
       setTarget({ courtIndex, startMin, valid });
     };
+
     const up = () => {
+      // 拉時長結束 → 提交
+      const rz = resizeRef.current;
+      if (rz && rz.moved) {
+        commitResize(rz, resizeDurRef.current ?? rz.origDuration);
+      }
+      // 拖移結束 → 提交或開快速編輯
       const d = dragRef.current;
       const t = targetRef.current;
       if (d && d.moved && t) {
@@ -187,17 +288,24 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
       }
       dragRef.current = null;
       targetRef.current = null;
+      resizeRef.current = null;
+      resizeDurRef.current = null;
       setDrag(null);
       setTarget(null);
+      setResize(null);
+      setResizeDur(null);
     };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+
+    const on = supportsPointer ? "pointermove" : "mousemove";
+    const off = supportsPointer ? "pointerup" : "mouseup";
+    window.addEventListener(on, move);
+    window.addEventListener(off, up);
     return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
+      window.removeEventListener(on, move);
+      window.removeEventListener(off, up);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drag]);
+  }, [drag, resize, courts, openMin, closeMin]);
 
   async function commitMove(d: DragState, t: Target) {
     const b = d.booking;
@@ -211,6 +319,16 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
     fd.set("startTime", startTime);
     const res = await adminMoveBookingAction(fd);
     if (!res.ok) setError(res.error ?? "搬移失敗");
+    load();
+  }
+
+  async function commitResize(r: ResizeState, newDur: number) {
+    if (newDur === r.origDuration) return; // 沒動
+    const fd = new FormData();
+    fd.set("bookingId", r.booking.id);
+    fd.set("durationMinutes", String(newDur));
+    const res = await adminResizeBookingAction(fd);
+    if (!res.ok) setError(res.error ?? "調整時長失敗");
     load();
   }
 
@@ -259,7 +377,9 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
               height: HEADER_H,
             }}
           >
-            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400">場地</div>
+            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400">
+              場地
+            </div>
             {slotStarts.map((s) => (
               <div
                 key={s}
@@ -284,13 +404,15 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
                   className="absolute left-0 top-0 z-10 flex flex-col justify-center bg-white px-3"
                   style={{ width: LABEL, height: ROW_H }}
                 >
-                  <p className="truncate text-sm font-semibold text-slate-700">{court.name}</p>
+                  <p className="truncate text-sm font-semibold text-slate-700">
+                    {court.name}
+                  </p>
                   <p className="truncate text-[11px] text-slate-400">
                     {court.venueName}
                   </p>
                 </div>
 
-                {/* 時段格背景 */}
+                {/* 時段格背景（點空白格＝代客下單） */}
                 <div
                   className="absolute inset-y-0 grid"
                   style={{
@@ -306,6 +428,21 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
                         "border-l border-slate-100",
                         s < nowMin && "bg-slate-50/70"
                       )}
+                      onClick={() => {
+                        const slotCourtId = court.id;
+                        const slotStart = fmtHM(s);
+                        const occupied = courtBookings.some(
+                          (b) =>
+                            toMin(b.startTime) <= s && s < toMin(b.endTime)
+                        );
+                        if (occupied) return;
+                        setQuickCreate({
+                          courtId: slotCourtId,
+                          courtName: court.name,
+                          venueName: court.venueName,
+                          startTime: slotStart,
+                        });
+                      }}
                     />
                   ))}
                 </div>
@@ -316,28 +453,74 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
                   const left = ((startMin - openMin) / SLOT) * CELL;
                   const width = ((b.durationMinutes ?? 30) / SLOT) * CELL;
                   const isDragging = drag?.booking.id === b.id;
+                  const isResizing = resize?.booking.id === b.id;
+                  const resizingW =
+                    isResizing && resizeDur
+                      ? ((resizeDur - (b.durationMinutes ?? 30)) / SLOT) * CELL
+                      : 0;
+                  const grabHandler = supportsPointer
+                    ? {
+                        onPointerDown: (e: React.PointerEvent) =>
+                          onGrabDown(
+                            {
+                              clientX: e.clientX,
+                              clientY: e.clientY,
+                              preventDefault: () => e.preventDefault(),
+                            },
+                            b
+                          ),
+                      }
+                    : { onMouseDown: (e: React.MouseEvent) => onGrabDown(e, b) };
+                  const resizeHandler = supportsPointer
+                    ? {
+                        onPointerDown: (e: React.PointerEvent) =>
+                          onResizeDown(
+                            {
+                              clientX: e.clientX,
+                              clientY: e.clientY,
+                              preventDefault: () => e.preventDefault(),
+                              stopPropagation: () => e.stopPropagation(),
+                            },
+                            b
+                          ),
+                      }
+                    : {
+                        onMouseDown: (e: React.MouseEvent) =>
+                          onResizeDown(e, b),
+                      };
                   return (
                     <div
                       key={b.id}
-                      onPointerDown={(e) => onPointerDown(e, b)}
+                      {...grabHandler}
                       className={cn(
                         "absolute z-20 cursor-grab overflow-hidden rounded-md px-1.5 py-1 text-[11px] leading-tight text-white shadow-sm active:cursor-grabbing",
                         b.status === "pending" ? "bg-amber-500" : "bg-emerald-600",
-                        isDragging && "opacity-40"
+                        isDragging && "opacity-40",
+                        isResizing && "opacity-80"
                       )}
                       style={{
                         left: LABEL + left,
                         top: 4,
-                        width: Math.max(width - 2, 20),
+                        width: Math.max(width + resizingW - 2, 20),
                         height: ROW_H - 8,
                         touchAction: "none",
                       }}
                       title={`${b.startTime}–${b.endTime}${b.memberName ? ` · ${b.memberName}` : ""}`}
                     >
                       <p className="truncate font-semibold">
-                        {width > 72 ? `${b.startTime}–${b.endTime}` : b.startTime}
+                        {width > 72
+                          ? `${b.startTime}–${b.endTime}`
+                          : b.startTime}
                       </p>
-                      <p className="truncate opacity-90">{b.memberName ?? ""}</p>
+                      <p className="truncate opacity-90">
+                        {b.memberName ?? ""}
+                      </p>
+                      {/* 右緣拉時長把手 */}
+                      <div
+                        {...resizeHandler}
+                        className="absolute right-0 top-0 bottom-0 z-30 w-2.5 cursor-ew-resize"
+                        title="拖右緣調整時長"
+                      />
                     </div>
                   );
                 })}
@@ -388,7 +571,9 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
         <span className="flex items-center gap-1">
           <i className="h-3 w-3 rounded bg-slate-100" /> 已過去
         </span>
-        <span className="ml-2 text-slate-400">左右拖＝改時間，上下拖＝換面場</span>
+        <span className="ml-2 text-slate-400">
+          左右拖＝改時間，上下拖＝換面場，拖右緣＝調時長，點空白格＝代客下單
+        </span>
       </div>
 
       {selected && (
@@ -396,6 +581,18 @@ export default function ScheduleBoard({ courts }: { courts: Court[] }) {
           booking={selected as ModalBooking}
           onClose={() => setSelected(null)}
           onChanged={() => load()}
+        />
+      )}
+
+      {quickCreate && (
+        <QuickCreateModal
+          courtId={quickCreate.courtId}
+          courtName={quickCreate.courtName}
+          venueName={quickCreate.venueName}
+          date={date}
+          startTime={quickCreate.startTime}
+          members={members}
+          onClose={() => setQuickCreate(null)}
         />
       )}
     </div>

@@ -10,6 +10,8 @@ import {
   markBookingPaid,
   markBookingUnpaid,
   generateRecurringBookings,
+  MIN_DURATION_MINUTES,
+  MAX_DURATION_MINUTES,
 } from "@/lib/booking";
 import { markAttendance } from "@/lib/noshow";
 import { sendLineAdminNotify } from "@/lib/notify";
@@ -408,7 +410,9 @@ export async function adminCreateBookingAction(
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
-  redirect("/admin");
+  // returnTo 可讓排班板等處「頁內代客下單」後留在原頁
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  redirect(returnTo && returnTo.startsWith("/") ? returnTo : "/admin");
 }
 
 export async function adminUpdateBookingAction(
@@ -508,7 +512,8 @@ export async function toggleCashPaymentAction(formData: FormData): Promise<void>
   revalidatePath("/admin/bookings");
 }
 
-/** 快速加減時長（＋30 分 / −30 分），沿用防重疊與營業時間檢查 */
+/** 快速加減時長（＋30 分 / −30 分），沿用防重疊與營業時間檢查。
+ *  允許調整過去訂位（後台補登情境）；錯誤會 throw 讓前端顯示原因。 */
 export async function adminAdjustDurationAction(formData: FormData): Promise<void> {
   await requireStaff();
   const id = String(formData.get("id") ?? "");
@@ -520,29 +525,75 @@ export async function adminAdjustDurationAction(formData: FormData): Promise<voi
   });
   if (!booking) return;
   if (booking.status === "cancelled" || booking.status === "released") {
-    revalidatePath("/admin");
-    return;
+    throw new Error("已取消或已釋放的訂位無法修改");
   }
   const newDuration = booking.durationMinutes + delta;
+  await updateBooking({
+    bookingId: id,
+    courtId: booking.courtId,
+    date: booking.date,
+    startTime: booking.startTime,
+    durationMinutes: newDuration,
+    allowPast: true,
+  });
+  await logBookingEvent({
+    bookingId: id,
+    actorName: "管理員",
+    action: delta > 0 ? "extend" : "shorten",
+    detail: `時長 ${booking.durationMinutes}→${newDuration} 分｜${booking.court.venue.name} ${booking.court.name}｜${booking.date} ${booking.startTime}`,
+  });
+  revalidatePath("/admin");
+  revalidatePath("/admin/bookings");
+}
+
+/** 拖拉調整時長：直接設定為指定時長（30 分單位；排班板右緣把手用） */
+export async function adminResizeBookingAction(formData: FormData): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  await requireStaff();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const durationMinutes = Number(formData.get("durationMinutes") ?? 0);
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { court: { include: { venue: true } } },
+  });
+  if (!booking) return { ok: false, error: "訂位不存在" };
+  if (booking.status === "cancelled" || booking.status === "released") {
+    return { ok: false, error: "已取消或已釋放的訂位無法修改" };
+  }
+  if (
+    !Number.isInteger(durationMinutes) ||
+    durationMinutes < MIN_DURATION_MINUTES ||
+    durationMinutes > MAX_DURATION_MINUTES ||
+    durationMinutes % 30 !== 0
+  ) {
+    return { ok: false, error: "時長須為 30 的倍數（30~240 分）" };
+  }
   try {
     await updateBooking({
-      bookingId: id,
+      bookingId,
       courtId: booking.courtId,
       date: booking.date,
       startTime: booking.startTime,
-      durationMinutes: newDuration,
+      durationMinutes,
+      allowPast: true,
     });
     await logBookingEvent({
-      bookingId: id,
+      bookingId,
       actorName: "管理員",
-      action: delta > 0 ? "extend" : "shorten",
-      detail: `時長 ${booking.durationMinutes}→${newDuration} 分｜${booking.court.venue.name} ${booking.court.name}｜${booking.date} ${booking.startTime}`,
+      action: durationMinutes > booking.durationMinutes ? "extend" : "shorten",
+      detail: `拖拉調整時長 ${booking.durationMinutes}→${durationMinutes} 分｜${booking.court.venue.name} ${booking.court.name}｜${booking.date} ${booking.startTime}`,
     });
-  } catch {
-    // 目標時段被佔 / 超出營業時間 / 超出時長上限時，靜默忽略（UI 刷新後維持原狀）
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "調整時長失敗（時段可能被佔）",
+    };
   }
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
+  return { ok: true };
 }
 
 /** 拖移搬訂位：搬時間（同面場）或換面場（同時段），時長不變 */

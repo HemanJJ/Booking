@@ -8,11 +8,17 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminSchedulePage() {
-  const courts = await prisma.court.findMany({
-    where: { status: "active", venue: { status: "active" } },
-    orderBy: [{ venue: { name: "asc" } }, { name: "asc" }],
-    include: { venue: true },
-  });
+  const [courts, members] = await Promise.all([
+    prisma.court.findMany({
+      where: { status: "active", venue: { status: "active" } },
+      orderBy: [{ venue: { name: "asc" } }, { name: "asc" }],
+      include: { venue: true },
+    }),
+    prisma.member.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, email: true, phone: true },
+    }),
+  ]);
 
   if (courts.length === 0) {
     return (
@@ -31,7 +37,7 @@ export default async function AdminSchedulePage() {
         <div>
           <h1 className="text-2xl font-bold">排班拖移</h1>
           <p className="mt-1 text-sm text-slate-500">
-            抓色塊左右拖＝改時間；上下拖＝換面場；點一下＝開啟快速編輯。
+            抓色塊左右拖＝改時間；上下拖＝換面場；拖右緣＝調時長；點一下＝快速編輯；點空白時段＝代客下單。
           </p>
         </div>
         <Link
@@ -50,6 +56,7 @@ export default async function AdminSchedulePage() {
           openingTime: c.venue.openingTime,
           closingTime: c.venue.closingTime,
         }))}
+        members={members}
       />
     </div>
   );
