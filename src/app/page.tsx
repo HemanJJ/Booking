@@ -15,13 +15,13 @@ const features = [
     icon: "🧵",
     title: "穿線寄拍",
     desc: "斷線丟進 24h 拍櫃，穿好 LINE 通知你來拿。",
-    href: "https://smartlocker-alpha.vercel.app/order",
+    href: "https://shop.dearfly.com.tw/order",
   },
   {
     icon: "🛒",
     title: "用品補給",
     desc: "球、握把布、泡麵，無人店自取，半夜也開。",
-    href: "https://smartlocker-alpha.vercel.app/store",
+    href: "https://shop.dearfly.com.tw/store",
   },
 ];
 
