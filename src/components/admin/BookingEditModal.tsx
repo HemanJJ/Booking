@@ -77,13 +77,14 @@ export default function BookingEditModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/40"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div
+          className="my-auto w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="mb-3 flex items-start justify-between">
           <div>
             <p className="font-semibold">
@@ -151,6 +152,7 @@ export default function BookingEditModal({
         )}
 
         {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
+        </div>
       </div>
     </div>
   );

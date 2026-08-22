@@ -536,7 +536,8 @@ export default function ScheduleBoard({
                           e.stopPropagation();
                           setSelected(b);
                         }}
-                        className="absolute left-0.5 top-0.5 z-40 rounded bg-white/25 px-1 py-0.5 text-[10px] font-bold leading-none text-white hover:bg-white/40"
+                        className="absolute left-0.5 top-0.5 z-40 rounded px-1.5 py-0.5 text-[11px] font-bold leading-none text-white hover:brightness-125"
+                        style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
                         title="快速編輯"
                       >
                         ✏️
