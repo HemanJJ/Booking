@@ -63,9 +63,8 @@ const HEADER_H = 28; // 時間表頭高
 const SLOT = 30;
 const MAX_DUR = 240; // 最長 4 小時
 
-// 舊瀏覽器不支援 PointerEvent（Safari<13、舊 Edge/IE）→ 退回 Mouse Events
-const supportsPointer =
-  typeof window !== "undefined" && "PointerEvent" in window;
+// 注意：互動一律用 Mouse Events（onMouseDown/mousemove/mouseup），
+// 最舊瀏覽器（含 IE、Safari 舊版）都支援，不依賴 PointerEvent 偵測。
 
 function toMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -118,8 +117,9 @@ export default function ScheduleBoard({
   const resizeDurRef = useRef<number | null>(null);
   const targetRef = useRef<Target | null>(null);
   // 拖移/拉長監聽（down 當下同步掛載，up 移除；避免 React re-render 造成的 race）
-  const evtMove = supportsPointer ? "pointermove" : "mousemove";
-  const evtUp = supportsPointer ? "pointerup" : "mouseup";
+  // 一律用 Mouse Events（最舊瀏覽器也支援；不依賴 PointerEvent 偵測）
+  const evtMove = "mousemove";
+  const evtUp = "mouseup";
   const moveFnRef = useRef<((e: MouseEvent | PointerEvent) => void) | null>(null);
   const upFnRef = useRef<(() => void) | null>(null);
 
@@ -473,36 +473,13 @@ export default function ScheduleBoard({
                     isResizing && resizeDur
                       ? ((resizeDur - (b.durationMinutes ?? 30)) / SLOT) * CELL
                       : 0;
-                  const grabHandler = supportsPointer
-                    ? {
-                        onPointerDown: (e: React.PointerEvent) =>
-                          onGrabDown(
-                            {
-                              clientX: e.clientX,
-                              clientY: e.clientY,
-                              preventDefault: () => e.preventDefault(),
-                            },
-                            b
-                          ),
-                      }
-                    : { onMouseDown: (e: React.MouseEvent) => onGrabDown(e, b) };
-                  const resizeHandler = supportsPointer
-                    ? {
-                        onPointerDown: (e: React.PointerEvent) =>
-                          onResizeDown(
-                            {
-                              clientX: e.clientX,
-                              clientY: e.clientY,
-                              preventDefault: () => e.preventDefault(),
-                              stopPropagation: () => e.stopPropagation(),
-                            },
-                            b
-                          ),
-                      }
-                    : {
-                        onMouseDown: (e: React.MouseEvent) =>
-                          onResizeDown(e, b),
-                      };
+                  // 統一用 Mouse Events（所有瀏覽器都支援，含舊版；不依賴 PointerEvent）
+                  const grabHandler = {
+                    onMouseDown: (e: React.MouseEvent) => onGrabDown(e, b),
+                  };
+                  const resizeHandler = {
+                    onMouseDown: (e: React.MouseEvent) => onResizeDown(e, b),
+                  };
                   return (
                     <div
                       key={b.id}
@@ -530,12 +507,20 @@ export default function ScheduleBoard({
                       <p className="truncate opacity-90">
                         {b.memberName ?? ""}
                       </p>
-                      {/* 右緣拉時長把手 */}
+                      {/* 右緣拉時長把手（加寬＋視覺提示） */}
                       <div
                         {...resizeHandler}
-                        className="absolute right-0 top-0 bottom-0 z-30 w-2.5 cursor-ew-resize"
+                        className="absolute right-0 top-0 bottom-0 z-30 cursor-ew-resize"
+                        style={{ width: 14, borderLeft: "2px solid rgba(255,255,255,0.55)" }}
                         title="拖右緣調整時長"
-                      />
+                      >
+                        <span
+                          className="pointer-events-none absolute right-0.5 top-1/2 -translate-y-1/2 text-[10px] leading-none opacity-80"
+                          style={{ writingMode: "vertical-rl" }}
+                        >
+                          ⠿
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
