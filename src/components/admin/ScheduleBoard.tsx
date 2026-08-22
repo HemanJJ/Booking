@@ -498,6 +498,13 @@ export default function ScheduleBoard({
                         touchAction: "none",
                       }}
                       title={`${b.startTime}–${b.endTime}${b.memberName ? ` · ${b.memberName}` : ""}`}
+                      onClick={(e) => {
+                        // 點一下＝快速編輯（onClick 是保險路徑：若滑鼠按住移動過，
+                        // 瀏覽器不會產生 click；只有「點一下」才觸發）
+                        if (dragRef.current) return;
+                        setSelected(b);
+                        e.stopPropagation();
+                      }}
                     >
                       <p className="truncate font-semibold">
                         {width > 72
@@ -521,6 +528,19 @@ export default function ScheduleBoard({
                           ⠿
                         </span>
                       </div>
+                      {/* 編輯按鈕（不依賴拖移，點它就開快速編輯） */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelected(b);
+                        }}
+                        className="absolute left-0.5 top-0.5 z-40 rounded bg-white/25 px-1 py-0.5 text-[10px] font-bold leading-none text-white hover:bg-white/40"
+                        title="快速編輯"
+                      >
+                        ✏️
+                      </button>
                     </div>
                   );
                 })}
