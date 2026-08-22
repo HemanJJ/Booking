@@ -115,7 +115,7 @@ npx tsx scripts/richmenu.ts list   # 看 LINE 圖文選單
 ```
 讀 /Users/defi/Desktop/projects/code/booking/docs/HANDOFF-程式交接.md
 以及 docs/obsidian/ 知識庫（重點：15-營運維護、14-UIUX、13-營業規則）、stringing/HANDOFF.md。
-目前任務：no-show 停權自動化已完成（A）；下一個是前台點選訂位（C）；LINE Pay 等商家憑證。
+目前任務：no-show 停權自動化已完成（A）、排班拖移強化已完成（D）；下一個是前台點選訂位（C）；LINE Pay 等商家憑證。
 ```
 
 ---
