@@ -132,3 +132,24 @@ cd code/smartlocker/web && ./deploy.sh
 ## 八、本會話最後金句
 
 > 生意在雲端，程式在 GitHub，資料在 Neon，Mac 只是工具。掛了看 `17-災難復原.md`。
+
+
+---
+
+## 九、Session 紀錄（2026-08-22）
+
+### 完成（本 session 追加）
+- **運動商城**：量價階梯（%或單價、批次套用）、**配貨到店**（總倉→店家，草稿→人工審核→核准配送＋LINE 通知）、**自動補貨**（安全存量→需求單→配貨草稿→審核）
+- **分店模型**：太平總店（id1，總倉）＋測試加盟店（id6，Demo，15 項各 10）；B~E 空殼已停用（真加盟簽約才啟用）
+- **王清標 15 項測試資料**（總倉各 90、測試店各 10、789折三階）
+- **報價單**：`場館導入服務報價單.md`（台灣台幣、3 方案＋硬體＋月費＋分潤＋KPI）
+- **識圖**：本機 macOS 視覺工具（view_image/ocr_image）免費可用；DSH 貼圖識圖（Kimi/OpenRouter）已串好
+
+### DSH 插件環境（2026-08-22 現況）
+- 已裝：**dshmarket**（市集入口，npm 乾淨裝）、**dsh-memory**（長期記憶 v0.5.0）、**dsh-plugin-image-input**（貼圖→Kimi 識圖）、**dsh-pilot**（無頭瀏覽器，備而不用）
+- 已還原乾淨過一次（教訓：CLI `github:&path:` 語法斷鏈 → **插件一律手動經市集裝**，CLI 只裝 npm 套件）
+- 待裝（下 session）：`dsh-kb-sieve`（知識庫打包）、`dsh-data-agent`（AI 查 Neon）——一次一支
+- 設定待辦：「知识库回写 未挂载」→ 設定→插件→知識庫寫回資料夾填 `~/Documents/Difly自動筆記`（新資料夾，別指 obsidian 主庫）
+
+### 待辦優先序（不變）
+1. LINE Pay 憑證（等商家） 2. 硬體：485/GoDex/kiosk（板子 4 天後到，**先驗板 skb_probe.py sweep**） 3. no-show 自動化 4. 點選訂位 5. 清 demo 6. 團購 Phase B 7. 加盟商帳號 8. 大櫃
