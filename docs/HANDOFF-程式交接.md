@@ -73,12 +73,14 @@
 
 ### D. 排班拖移強化 ✅ 已完成（2026-08-22）
 
-- ✅ **修舊瀏覽器相容**：ScheduleBoard 原本全用 Pointer Events（Safari<13/舊 Edge/IE 不支援 → 點一下、拖移全失效）。改為 `supportsPointer` 偵測：支援走 pointer、不支援自動退回 mouse events。
-- ✅ **修快速點擊 race（2026-08-22 二修）**：move/up listener 原本用 `useEffect([drag])` 掛載，快速點擊時 pointerup 比 effect 早到 → 事件丟失（點一下沒反應、沒拖拉線）。改為 **pointerdown/mousedown 當下同步 `attachListeners()`**、up 時 detach（moveRef/upRef 每次 render 更新）。線上實測快速點擊/拖移/ghost 全通。
-- ✅ **拖右緣＝調時長**：色塊右緣加把手，橫拖 30 分為單位（30~240，防重疊＋營業時間檢查），`adminResizeBookingAction`。
-- ✅ **點空白時段＝頁內代客下單**：QuickCreateModal（選會員/臨時客人＋時長＋收款），預填場地/日期/時段，送出後 `returnTo=/admin/schedule` 留在原頁。
-- ✅ **時長調整允許過去訂位**（`updateBooking` 加 `allowPast`），錯誤不再靜默吞掉（throw 讓 modal 顯示原因）。
-- 檔案：`src/components/admin/ScheduleBoard.tsx`（改）、`QuickCreateModal.tsx`（新）、`src/app/admin/actions.ts`、`src/lib/booking.ts`。
+- ✅ **修舊瀏覽器相容**：ScheduleBoard 原本全用 Pointer Events（Safari<13/舊 Edge/IE 不支援 → 點一下、拖移全失效）。改為 Mouse Events（onMouseDown/mousemove/mouseup，所有瀏覽器支援）＋「✏️ 編輯按鈕」走 onClick 保險路徑。
+- ✅ **修快速點擊 race（2026-08-22 二修）**：move/up listener 改在 pointerdown/mousedown 當下同步 attach、up 時 detach（避免 React re-render 造成事件丟失）。
+- ✅ **根治 modal 樣式（2026-08-22 三修）**：Tailwind class 在部分瀏覽器整批不載入 → modal 掉右下角、無遮罩、底部按鈕被切。**關鍵互動樣式全改內聯 style**（position/inset/flex/align-items/overflow-y/rgba 遮罩），modal 限高 85vh 可捲動。教訓見 `docs/obsidian/19-UI踩坑紀錄.md`。
+- ✅ **拖右緣＝調時長**：色塊右緣把手橫拖（30 分單位，30~240，防重疊），`adminResizeBookingAction`。
+- ✅ **點空白時段＝頁內代客下單**：QuickCreateModal（returnTo 留原頁）。
+- ✅ **時長調整允許過去訂位**（`updateBooking` 加 `allowPast`），錯誤不再靜默。
+- ✅ **no-show 通知克制（2026-08-22）**：自動判定不逐筆發 LINE（曾轟炸 11 封＋LINE 每月 200 則額度用盡）；只寫 logfile，僅停權時發一封彙整；寬限期 24h。
+- 檔案：`src/components/admin/ScheduleBoard.tsx`、`QuickCreateModal.tsx`、`BookingEditModal.tsx`、`src/app/admin/actions.ts`、`src/lib/booking.ts`、`src/lib/noshow.ts`。
 
 ---
 
