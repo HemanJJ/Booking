@@ -378,27 +378,54 @@ export default function ScheduleBoard({
         {error && <span className="text-xs text-red-600">{error}</span>}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div
+        style={{
+          overflowX: "auto",
+          borderRadius: 16,
+          border: "1px solid #e2e8f0",
+          backgroundColor: "#fff",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        }}
+      >
         <div
           ref={boardRef}
-          className="relative select-none"
-          style={{ width: `${LABEL + slotStarts.length * CELL}px` }}
+          style={{
+            position: "relative",
+            userSelect: "none",
+            width: `${LABEL + slotStarts.length * CELL}px`,
+          }}
         >
           {/* 時間表頭 */}
           <div
-            className="grid border-b border-slate-200 bg-slate-50"
             style={{
+              display: "grid",
               gridTemplateColumns: `${LABEL}px repeat(${slotStarts.length}, ${CELL}px)`,
               height: HEADER_H,
+              borderBottom: "1px solid #e2e8f0",
+              backgroundColor: "#f8fafc",
             }}
           >
-            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400">
+            <div
+              style={{
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#94a3b8",
+              }}
+            >
               場地
             </div>
             {slotStarts.map((s) => (
               <div
                 key={s}
-                className="border-l border-slate-100 px-0.5 text-center text-[10px] leading-5 text-slate-400"
+                style={{
+                  borderLeft: "1px solid #cbd5e1",
+                  padding: "0 2px",
+                  textAlign: "center",
+                  fontSize: 10,
+                  lineHeight: "20px",
+                  color: "#94a3b8",
+                }}
               >
                 {s % 60 === 0 ? fmtHM(s) : ""}
               </div>
@@ -411,38 +438,72 @@ export default function ScheduleBoard({
             return (
               <div
                 key={court.id}
-                className="border-b border-slate-100 last:border-b-0"
-                style={{ height: ROW_H, position: "relative" }}
+                style={{
+                  height: ROW_H,
+                  position: "relative",
+                  borderBottom: "1px solid #e2e8f0",
+                }}
               >
                 {/* 左側場地標籤 */}
                 <div
-                  className="absolute left-0 top-0 z-10 flex flex-col justify-center bg-white px-3"
-                  style={{ width: LABEL, height: ROW_H }}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    zIndex: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    backgroundColor: "#fff",
+                    padding: "0 12px",
+                    width: LABEL,
+                    height: ROW_H,
+                  }}
                 >
-                  <p className="truncate text-sm font-semibold text-slate-700">
+                  <p
+                    style={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "#334155",
+                    }}
+                  >
                     {court.name}
                   </p>
-                  <p className="truncate text-[11px] text-slate-400">
+                  <p
+                    style={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      fontSize: 11,
+                      color: "#94a3b8",
+                    }}
+                  >
                     {court.venueName}
                   </p>
                 </div>
 
-                {/* 時段格背景（點空白格＝代客下單） */}
+                {/* 時段格背景（點空白格＝代客下單）— 全內聯定位，任何瀏覽器都精準 */}
                 <div
-                  className="absolute inset-y-0 grid"
                   style={{
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
                     left: LABEL,
                     right: 0,
+                    display: "grid",
                     gridTemplateColumns: `repeat(${slotStarts.length}, ${CELL}px)`,
                   }}
                 >
                   {slotStarts.map((s) => (
                     <div
                       key={s}
-                      className={cn(
-                        "border-l border-slate-100",
-                        s < nowMin && "bg-slate-50/70"
-                      )}
+                      style={{
+                        borderLeft: "1px solid #cbd5e1",
+                        backgroundColor: s < nowMin ? "rgba(248,250,252,0.7)" : "transparent",
+                      }}
                       onClick={() => {
                         const slotCourtId = court.id;
                         const slotStart = fmtHM(s);
@@ -485,16 +546,23 @@ export default function ScheduleBoard({
                       key={b.id}
                       {...grabHandler}
                       className={cn(
-                        "absolute z-20 cursor-grab overflow-hidden rounded-md px-1.5 py-1 text-[11px] leading-tight text-white shadow-sm active:cursor-grabbing",
+                        "text-[11px] leading-tight text-white",
                         isDragging && "opacity-40",
                         isResizing && "opacity-80"
                       )}
                       style={{
+                        position: "absolute",
+                        zIndex: 20,
+                        cursor: "grab",
+                        overflow: "hidden",
+                        borderRadius: 6,
+                        padding: "4px 6px",
                         left: LABEL + left,
                         top: 4,
                         width: Math.max(width + resizingW - 2, 20),
                         height: ROW_H - 8,
                         touchAction: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
                         // 內聯背景色：pending=琥珀、其餘=深綠（避免 Tailwind class 漏載變成白格）
                         backgroundColor:
                           b.status === "pending" ? "#f59e0b" : "#059669",
@@ -508,24 +576,40 @@ export default function ScheduleBoard({
                         e.stopPropagation();
                       }}
                     >
-                      <p className="truncate font-semibold">
+                      <p style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>
                         {width > 72
                           ? `${b.startTime}–${b.endTime}`
                           : b.startTime}
                       </p>
-                      <p className="truncate opacity-90">
+                      <p style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: 0.9 }}>
                         {b.memberName ?? ""}
                       </p>
-                      {/* 右緣拉時長把手（加寬＋視覺提示） */}
+                      {/* 右緣拉時長把手（全內聯定位＋視覺提示） */}
                       <div
                         {...resizeHandler}
-                        className="absolute right-0 top-0 bottom-0 z-30 cursor-ew-resize"
-                        style={{ width: 14, borderLeft: "2px solid rgba(255,255,255,0.55)" }}
+                        style={{
+                          position: "absolute",
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          zIndex: 30,
+                          cursor: "ew-resize",
+                          width: 14,
+                          borderLeft: "2px solid rgba(255,255,255,0.6)",
+                        }}
                         title="拖右緣調整時長"
                       >
                         <span
-                          className="pointer-events-none absolute right-0.5 top-1/2 -translate-y-1/2 text-[10px] leading-none opacity-80"
-                          style={{ writingMode: "vertical-rl" }}
+                          style={{
+                            position: "absolute",
+                            right: 2,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            fontSize: 10,
+                            lineHeight: 1,
+                            opacity: 0.85,
+                            writingMode: "vertical-rl",
+                          }}
                         >
                           ⠿
                         </span>
@@ -538,8 +622,21 @@ export default function ScheduleBoard({
                           e.stopPropagation();
                           setSelected(b);
                         }}
-                        className="absolute left-0.5 top-0.5 z-40 rounded px-1.5 py-0.5 text-[11px] font-bold leading-none text-white hover:brightness-125"
-                        style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+                        style={{
+                          position: "absolute",
+                          left: 2,
+                          top: 2,
+                          zIndex: 40,
+                          borderRadius: 4,
+                          padding: "2px 6px",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          lineHeight: 1,
+                          color: "#fff",
+                          backgroundColor: "rgba(0,0,0,0.45)",
+                          cursor: "pointer",
+                          border: "none",
+                        }}
                         title="快速編輯"
                       >
                         ✏️
@@ -554,10 +651,32 @@ export default function ScheduleBoard({
           {/* 現在時間紅線（原生樣式：細線＋時間標籤） */}
           {nowMin >= openMin && nowMin <= closeMin && (
             <div
-              className="pointer-events-none absolute top-0 bottom-0 z-30 w-0.5 bg-red-500"
-              style={{ left: `${LABEL + ((nowMin - openMin) / SLOT) * CELL}px` }}
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                zIndex: 30,
+                pointerEvents: "none",
+                left: `${LABEL + ((nowMin - openMin) / SLOT) * CELL}px`,
+                width: 2,
+                backgroundColor: "#ef4444",
+              }}
             >
-              <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-500 px-1 py-0.5 text-[10px] font-semibold text-white">
+              <span
+                style={{
+                  position: "absolute",
+                  top: -2,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  whiteSpace: "nowrap",
+                  borderRadius: 4,
+                  backgroundColor: "#ef4444",
+                  padding: "2px 4px",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#fff",
+                }}
+              >
                 {fmtHM(nowMin)}
               </span>
             </div>
@@ -566,13 +685,15 @@ export default function ScheduleBoard({
           {/* 拖移幽靈（吸附預覽） */}
           {drag && target && (
             <div
-              className={cn(
-                "pointer-events-none absolute z-40 rounded-md border-2",
-                target.valid
-                  ? "border-emerald-500 bg-emerald-200/80"
-                  : "border-red-500 bg-red-200/80"
-              )}
               style={{
+                position: "absolute",
+                zIndex: 40,
+                pointerEvents: "none",
+                borderRadius: 6,
+                border: `2px solid ${target.valid ? "#10b981" : "#ef4444"}`,
+                backgroundColor: target.valid
+                  ? "rgba(167,243,208,0.8)"
+                  : "rgba(254,202,202,0.8)",
                 left: LABEL + ((target.startMin - openMin) / SLOT) * CELL,
                 top: HEADER_H + target.courtIndex * ROW_H + 4,
                 width: Math.max((dur / SLOT) * CELL - 2, 20),
