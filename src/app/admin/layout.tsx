@@ -4,6 +4,7 @@ import { getCurrentMember } from "@/lib/auth";
 
 const NAV: Array<{ href: string; label: string; owner?: boolean }> = [
   { href: "/admin", label: "儀表板" },
+  { href: "/admin/desk", label: "📱 櫃台模式" },
   { href: "/admin/bookings", label: "訂位管理" },
   { href: "/admin/bookings/new", label: "代客下單" },
   { href: "/admin/schedule", label: "排班拖移" },

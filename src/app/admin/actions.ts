@@ -379,6 +379,9 @@ export async function adminCreateBookingAction(
   const durationMinutes = Number(formData.get("durationMinutes") ?? 0);
   const payNow = String(formData.get("payNow") ?? "cash");
   const note = String(formData.get("note") ?? "").trim();
+  // source：phone=電話訂位（平板櫃台）｜admin=現場代客｜member=會員自助
+  const src = String(formData.get("source") ?? "admin").trim();
+  const source = src === "phone" ? "phone" : "admin";
 
   try {
     const memberId = await resolveMemberId(formData);
@@ -388,20 +391,21 @@ export async function adminCreateBookingAction(
       date,
       startTime,
       durationMinutes,
-      source: "admin",
+      source,
       note: note || null,
     });
     if (payNow === "cash") {
       await markBookingPaid(booking.id, "cash");
     }
+    const isPhone = source === "phone";
     await logBookingEvent({
       bookingId: booking.id,
       actorName: "管理員",
       action: "create",
-      detail: `代客下單｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}${payNow === "cash" ? "｜已收現金" : "｜未收"}`,
+      detail: `${isPhone ? "📞 電話訂位" : "代客下單"}｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}${payNow === "cash" ? "｜已收現金" : "｜未收"}`,
     });
     await sendLineAdminNotify(
-      `🟢 代客下單｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}${payNow === "cash" ? "（已收現金）" : "（未收）"}`,
+      `${isPhone ? "📞 電話訂位" : "🟢 代客下單"}｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}${payNow === "cash" ? "（已收現金）" : "（未收）"}`,
       "quiet"
     );
   } catch (e) {
@@ -410,7 +414,7 @@ export async function adminCreateBookingAction(
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
-  // returnTo 可讓排班板等處「頁內代客下單」後留在原頁
+  // returnTo 可讓排班板/櫃台等處「頁內代客下單」後留在原頁
   const returnTo = String(formData.get("returnTo") ?? "").trim();
   redirect(returnTo && returnTo.startsWith("/") ? returnTo : "/admin");
 }

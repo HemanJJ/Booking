@@ -107,7 +107,7 @@ export type CreateBookingInput = {
   date: string;
   startTime: string;
   durationMinutes: number;
-  source?: "member" | "admin" | "recurring";
+  source?: "member" | "admin" | "phone" | "recurring";
   note?: string | null;
   confirmed?: boolean; // true = 直接「已確認」（固定訂位用，不走 24h 保留）
   recurringId?: string | null;
