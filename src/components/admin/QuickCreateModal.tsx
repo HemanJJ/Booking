@@ -58,6 +58,7 @@ export default function QuickCreateModal({
       <div className="flex min-h-full items-center justify-center p-4">
         <div
           className="my-auto w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+          style={{ maxHeight: "85vh", overflowY: "auto" }}
           onClick={(e) => e.stopPropagation()}
         >
         <div className="mb-3 flex items-start justify-between">

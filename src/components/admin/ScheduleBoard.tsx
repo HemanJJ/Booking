@@ -486,7 +486,6 @@ export default function ScheduleBoard({
                       {...grabHandler}
                       className={cn(
                         "absolute z-20 cursor-grab overflow-hidden rounded-md px-1.5 py-1 text-[11px] leading-tight text-white shadow-sm active:cursor-grabbing",
-                        b.status === "pending" ? "bg-amber-500" : "bg-emerald-600",
                         isDragging && "opacity-40",
                         isResizing && "opacity-80"
                       )}
@@ -496,12 +495,15 @@ export default function ScheduleBoard({
                         width: Math.max(width + resizingW - 2, 20),
                         height: ROW_H - 8,
                         touchAction: "none",
+                        // 內聯背景色：pending=琥珀、其餘=深綠（避免 Tailwind class 漏載變成白格）
+                        backgroundColor:
+                          b.status === "pending" ? "#f59e0b" : "#059669",
                       }}
                       title={`${b.startTime}–${b.endTime}${b.memberName ? ` · ${b.memberName}` : ""}`}
                       onClick={(e) => {
-                        // 點一下＝快速編輯（onClick 是保險路徑：若滑鼠按住移動過，
-                        // 瀏覽器不會產生 click；只有「點一下」才觸發）
-                        if (dragRef.current) return;
+                        // 點一下＝快速編輯：只有「真的拖動過」才擋（拖動後瀏覽器
+                        // 不會產生 click，此判斷只是保險；沒拖動一律開 modal）
+                        if (dragRef.current?.moved) return;
                         setSelected(b);
                         e.stopPropagation();
                       }}
@@ -549,13 +551,21 @@ export default function ScheduleBoard({
             );
           })}
 
-          {/* 現在時間紅線 */}
+          {/* 現在時間紅線（加深＋陰影，確保看得到） */}
           {nowMin >= openMin && nowMin <= closeMin && (
             <div
-              className="pointer-events-none absolute top-0 bottom-0 z-30 w-0.5 bg-red-500"
-              style={{ left: `${LABEL + ((nowMin - openMin) / SLOT) * CELL}px` }}
+              className="pointer-events-none absolute top-0 bottom-0 z-30"
+              style={{
+                left: `${LABEL + ((nowMin - openMin) / SLOT) * CELL - 1}px`,
+                width: 4,
+                backgroundColor: "#dc2626",
+                boxShadow: "0 0 6px rgba(220,38,38,0.8)",
+              }}
             >
-              <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-500 px-1 py-0.5 text-[10px] font-semibold text-white">
+              <span
+                className="absolute -top-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-bold text-white"
+                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }}
+              >
                 {fmtHM(nowMin)}
               </span>
             </div>
