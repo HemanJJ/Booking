@@ -117,6 +117,11 @@ export default function ScheduleBoard({
   const resizeRef = useRef<ResizeState | null>(null);
   const resizeDurRef = useRef<number | null>(null);
   const targetRef = useRef<Target | null>(null);
+  // 拖移/拉長監聽（down 當下同步掛載，up 移除；避免 React re-render 造成的 race）
+  const evtMove = supportsPointer ? "pointermove" : "mousemove";
+  const evtUp = supportsPointer ? "pointerup" : "mouseup";
+  const moveFnRef = useRef<((e: MouseEvent | PointerEvent) => void) | null>(null);
+  const upFnRef = useRef<(() => void) | null>(null);
 
   const openMin = useMemo(
     () => Math.min(...courts.map((c) => toMin(c.openingTime))),
@@ -197,6 +202,7 @@ export default function ScheduleBoard({
     setDrag(d);
     setTarget(null);
     setError("");
+    attachListeners();
   }
 
   // ===== 開始拉時長（右緣把手） =====
@@ -214,98 +220,107 @@ export default function ScheduleBoard({
     resizeDurRef.current = r.origDuration;
     setResizeDur(r.origDuration);
     setError("");
+    attachListeners();
   }
 
-  // 拖移/拉長期間監聽 window 的 move/up（Pointer 或 Mouse，依瀏覽器支援）
-  useEffect(() => {
-    const move = (e: MouseEvent | PointerEvent) => {
-      const rect = boardRef.current?.getBoundingClientRect();
-      if (!rect) return;
+  // 拖移/拉長監聽：在 down 當下同步掛載（不等 React re-render），up 時移除。
+  // 舊版做法用 useEffect([drag]) 掛載 → 快速點擊時 pointerup 比 effect 先到 → 事件丟失（點一下沒反應）。
+  const moveRef = useRef<(e: MouseEvent | PointerEvent) => void>(() => {});
+  const upRef = useRef<() => void>(() => {});
+  const listeningRef = useRef(false);
 
-      // ---- 拉時長 ----
-      const rz = resizeRef.current;
-      if (rz) {
-        const moved = rz.moved || Math.abs(e.clientX - rz.startX) > 3;
-        if (!moved) return;
-        const deltaSlots = Math.round((e.clientX - rz.startX) / CELL);
-        const slots = clamp(
-          rz.origDuration / SLOT + deltaSlots,
-          SLOT / SLOT,
-          MAX_DUR / SLOT
-        );
-        const newDur = slots * SLOT;
-        const startMin = toMin(rz.booking.startTime);
-        const ok =
-          startMin + newDur <= closeMin &&
-          !isOverlap(rz.booking.courtId, startMin, newDur, rz.booking.id);
-        resizeRef.current = { ...rz, moved: true };
-        setResize({ ...rz, moved: true });
-        resizeDurRef.current = ok ? newDur : rz.booking.durationMinutes ?? 30;
-        setResizeDur(resizeDurRef.current);
-        return;
-      }
+  function attachListeners() {
+    if (listeningRef.current) return;
+    listeningRef.current = true;
+    window.addEventListener(evtMove, moveRef.current);
+    window.addEventListener(evtUp, upRef.current);
+  }
+  function detachListeners() {
+    if (!listeningRef.current) return;
+    listeningRef.current = false;
+    window.removeEventListener(evtMove, moveRef.current);
+    window.removeEventListener(evtUp, upRef.current);
+  }
 
-      // ---- 拖移 ----
-      const d = dragRef.current;
-      if (!d) return;
-      const moved =
-        d.moved || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 5;
+  // move/up 邏輯（每次 render 更新 ref，讀取最新 courts/nowMin/active）
+  moveRef.current = (e: MouseEvent | PointerEvent) => {
+    const rect = boardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    // ---- 拉時長 ----
+    const rz = resizeRef.current;
+    if (rz) {
+      const moved = rz.moved || Math.abs(e.clientX - rz.startX) > 3;
       if (!moved) return;
-      const dur = d.booking.durationMinutes ?? 30;
-      const innerX = e.clientX - rect.left - LABEL;
-      let slotIdx = Math.round((innerX - d.grabOffsetX) / CELL);
-      let startMin = openMin + slotIdx * SLOT;
-      startMin = Math.max(openMin, Math.min(startMin, closeMin - dur));
-      const courtIndex = Math.max(
-        0,
-        Math.min(
-          courts.length - 1,
-          Math.floor((e.clientY - rect.top - HEADER_H) / ROW_H)
-        )
+      const deltaSlots = Math.round((e.clientX - rz.startX) / CELL);
+      const slots = clamp(
+        rz.origDuration / SLOT + deltaSlots,
+        SLOT / SLOT,
+        MAX_DUR / SLOT
       );
-      const court = courts[courtIndex];
-      const valid =
-        startMin >= nowMin && !isOverlap(court.id, startMin, dur, d.booking.id);
-      dragRef.current = { ...d, moved: true };
-      setDrag({ ...d, moved: true });
-      targetRef.current = { courtIndex, startMin, valid };
-      setTarget({ courtIndex, startMin, valid });
-    };
+      const newDur = slots * SLOT;
+      const startMin = toMin(rz.booking.startTime);
+      const ok =
+        startMin + newDur <= closeMin &&
+        !isOverlap(rz.booking.courtId, startMin, newDur, rz.booking.id);
+      resizeRef.current = { ...rz, moved: true };
+      setResize({ ...rz, moved: true });
+      resizeDurRef.current = ok ? newDur : rz.booking.durationMinutes ?? 30;
+      setResizeDur(resizeDurRef.current);
+      return;
+    }
 
-    const up = () => {
-      // 拉時長結束 → 提交
-      const rz = resizeRef.current;
-      if (rz && rz.moved) {
-        commitResize(rz, resizeDurRef.current ?? rz.origDuration);
-      }
-      // 拖移結束 → 提交或開快速編輯
-      const d = dragRef.current;
-      const t = targetRef.current;
-      if (d && d.moved && t) {
-        commitMove(d, t);
-      } else if (d && !d.moved) {
-        setSelected(d.booking);
-      }
-      dragRef.current = null;
-      targetRef.current = null;
-      resizeRef.current = null;
-      resizeDurRef.current = null;
-      setDrag(null);
-      setTarget(null);
-      setResize(null);
-      setResizeDur(null);
-    };
+    // ---- 拖移 ----
+    const d = dragRef.current;
+    if (!d) return;
+    const moved =
+      d.moved || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 5;
+    if (!moved) return;
+    const dur = d.booking.durationMinutes ?? 30;
+    const innerX = e.clientX - rect.left - LABEL;
+    let slotIdx = Math.round((innerX - d.grabOffsetX) / CELL);
+    let startMin = openMin + slotIdx * SLOT;
+    startMin = Math.max(openMin, Math.min(startMin, closeMin - dur));
+    const courtIndex = Math.max(
+      0,
+      Math.min(
+        courts.length - 1,
+        Math.floor((e.clientY - rect.top - HEADER_H) / ROW_H)
+      )
+    );
+    const court = courts[courtIndex];
+    const valid =
+      startMin >= nowMin && !isOverlap(court.id, startMin, dur, d.booking.id);
+    dragRef.current = { ...d, moved: true };
+    setDrag({ ...d, moved: true });
+    targetRef.current = { courtIndex, startMin, valid };
+    setTarget({ courtIndex, startMin, valid });
+  };
 
-    const on = supportsPointer ? "pointermove" : "mousemove";
-    const off = supportsPointer ? "pointerup" : "mouseup";
-    window.addEventListener(on, move);
-    window.addEventListener(off, up);
-    return () => {
-      window.removeEventListener(on, move);
-      window.removeEventListener(off, up);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drag, resize, courts, openMin, closeMin]);
+  upRef.current = () => {
+    // 拉時長結束 → 提交
+    const rz = resizeRef.current;
+    if (rz && rz.moved) {
+      commitResize(rz, resizeDurRef.current ?? rz.origDuration);
+    }
+    // 拖移結束 → 提交或開快速編輯
+    const d = dragRef.current;
+    const t = targetRef.current;
+    if (d && d.moved && t) {
+      commitMove(d, t);
+    } else if (d && !d.moved) {
+      setSelected(d.booking);
+    }
+    dragRef.current = null;
+    targetRef.current = null;
+    resizeRef.current = null;
+    resizeDurRef.current = null;
+    setDrag(null);
+    setTarget(null);
+    setResize(null);
+    setResizeDur(null);
+    detachListeners();
+  };
 
   async function commitMove(d: DragState, t: Target) {
     const b = d.booking;
