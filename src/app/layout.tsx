@@ -5,8 +5,8 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: {
-    default: "DiFly 球場預約",
-    template: "%s | DiFly 球場預約",
+    default: "Dearfly 球場預約",
+    template: "%s | Dearfly 球場預約",
   },
   description:
     "線上預約羽球、籃球、桌球等運動場地。線上預約、多元場地、安全可靠。",

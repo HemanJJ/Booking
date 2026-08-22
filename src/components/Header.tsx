@@ -10,12 +10,17 @@ export default async function Header() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
         <Link
           href="/"
-          className="flex items-center gap-2 text-lg font-bold text-emerald-700"
+          className="flex items-center gap-2"
         >
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-600 text-white">
-            D
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dearfly-logo.png"
+            alt="Dearfly"
+            className="h-10 w-auto"
+          />
+          <span className="hidden text-lg font-bold text-emerald-700 sm:inline">
+            Dearfly 球場預約
           </span>
-          <span className="hidden sm:inline">DiFly 球場預約</span>
         </Link>
 
         <nav className="flex items-center gap-1 text-sm font-medium">
