@@ -54,7 +54,7 @@
 |---|------|------|
 | 1 | **LINE Pay**：申請商家 → 填 `LINE_PAY_CHANNEL_ID/SECRET` → 開通（booking＋販售共用） | 等憑證 |
 | 2 | **穿線硬體**：GoDex 列印對位、RS-485 格口（販售 2 櫃＋未來大櫃同鏈） | 現場另做 |
-| 3 | **no-show 停權自動化**（3 次永久停權，目前手動） | 待做 |
+| 3 | **no-show 停權自動化**（3 次永久停權） | ✅ 完成（2026-08-22，見 booking HANDOFF A） |
 | 4 | **前台「查閱場地」點選訂位**（P2） | 待做 |
 | 5 | **正式營業前清 demo 資料**（線上現有 20 假會員＋107 假訂位；smartlocker 測試店/測試貨要不要留待定） | 待清 |
 | 6 | **販售＋泡麵 24h 無人店**：**Phase 1 已完成**（軟體全上線）——商品/進銷存/量價階梯/配貨/自動補貨/分店切換/LINE 通知/後台認證（見 obsidian 18 篇） | ✅ 完成 |
@@ -151,5 +151,5 @@ cd code/smartlocker/web && ./deploy.sh
 - 待裝（下 session）：`dsh-kb-sieve`（知識庫打包）、`dsh-data-agent`（AI 查 Neon）——一次一支
 - 設定待辦：「知识库回写 未挂载」→ 設定→插件→知識庫寫回資料夾填 `~/Documents/Difly自動筆記`（新資料夾，別指 obsidian 主庫）
 
-### 待辦優先序（不變）
-1. LINE Pay 憑證（等商家） 2. 硬體：485/GoDex/kiosk（板子 4 天後到，**先驗板 skb_probe.py sweep**） 3. no-show 自動化 4. 點選訂位 5. 清 demo 6. 團購 Phase B 7. 加盟商帳號 8. 大櫃
+### 待辦優先序（2026-08-22 更新）
+1. LINE Pay 憑證（等商家） 2. 硬體：485/GoDex/kiosk（板子 4 天後到，**先驗板 skb_probe.py sweep**） 3. ~~no-show 自動化~~ ✅（booking HANDOFF A，本日完成） 4. 點選訂位 5. 清 demo 6. 團購 Phase B 7. 加盟商帳號 8. 大櫃
