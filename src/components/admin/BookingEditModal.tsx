@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatPrice, formatDate } from "@/lib/utils";
 import {
   adminAdjustDurationAction,
+  adminResizeBookingAction,
   adminCancelBookingAction,
 } from "@/app/admin/actions";
 
@@ -40,6 +41,9 @@ export default function BookingEditModal({
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [durInput, setDurInput] = useState(
+    String(booking.durationMinutes ?? 30)
+  );
 
   async function adjust(delta: number) {
     setBusy(true);
@@ -53,6 +57,29 @@ export default function BookingEditModal({
       onClose();
     } catch {
       setErr("操作失敗");
+      setBusy(false);
+    }
+  }
+
+  /** 直接輸入時長（分鐘）套用 */
+  async function applyDuration() {
+    const n = Number(durInput);
+    if (!Number.isInteger(n) || n < 30 || n > 240 || n % 30 !== 0) {
+      setErr("時長須為 30 的倍數（30~240 分）");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const fd = new FormData();
+      fd.set("bookingId", booking.id);
+      fd.set("durationMinutes", String(n));
+      const res = await adminResizeBookingAction(fd);
+      if (!res.ok) throw new Error(res.error ?? "調整時長失敗");
+      onChanged();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "調整時長失敗");
       setBusy(false);
     }
   }
@@ -140,34 +167,89 @@ export default function BookingEditModal({
         </div>
 
         {active ? (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <button
-              onClick={() => adjust(30)}
-              disabled={busy || (booking.durationMinutes ?? 0) >= 240}
-              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:bg-slate-300"
+          <div className="mt-4 space-y-2">
+            {/* 直接輸入時長（分鐘） */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+                padding: 8,
+              }}
             >
-              ＋30 分
-            </button>
-            <button
-              onClick={() => adjust(-30)}
-              disabled={busy || (booking.durationMinutes ?? 0) <= 30}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
-            >
-              －30 分
-            </button>
-            <Link
-              href={`/admin/bookings/${booking.id}/edit`}
-              className="col-span-2 rounded-lg border border-emerald-300 px-3 py-2 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-            >
-              完整改單（換場 / 改時段）
-            </Link>
-            <button
-              onClick={cancel}
-              disabled={busy}
-              className="col-span-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:bg-slate-100"
-            >
-              取消訂位
-            </button>
+              <span style={{ fontSize: 13, color: "#475569", whiteSpace: "nowrap" }}>
+                時長（分）
+              </span>
+              <input
+                type="number"
+                min={30}
+                max={240}
+                step={30}
+                value={durInput}
+                onChange={(e) => setDurInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") applyDuration();
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                  padding: "6px 8px",
+                  fontSize: 14,
+                }}
+                disabled={busy}
+              />
+              <button
+                type="button"
+                onClick={applyDuration}
+                disabled={busy}
+                style={{
+                  borderRadius: 6,
+                  backgroundColor: "#059669",
+                  color: "#fff",
+                  padding: "6px 10px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                套用
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => adjust(30)}
+                disabled={busy || (booking.durationMinutes ?? 0) >= 240}
+                className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:bg-slate-300"
+              >
+                ＋30 分
+              </button>
+              <button
+                onClick={() => adjust(-30)}
+                disabled={busy || (booking.durationMinutes ?? 0) <= 30}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                －30 分
+              </button>
+              <Link
+                href={`/admin/bookings/${booking.id}/edit`}
+                className="col-span-2 rounded-lg border border-emerald-300 px-3 py-2 text-center text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                完整改單（換場 / 改時段）
+              </Link>
+              <button
+                onClick={cancel}
+                disabled={busy}
+                className="col-span-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:bg-slate-100"
+              >
+                取消訂位
+              </button>
+            </div>
           </div>
         ) : (
           <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-center text-sm text-slate-500">
