@@ -151,5 +151,18 @@ cd code/smartlocker/web && ./deploy.sh
 - 待裝（下 session）：`dsh-kb-sieve`（知識庫打包）、`dsh-data-agent`（AI 查 Neon）——一次一支
 - 設定待辦：「知识库回写 未挂载」→ 設定→插件→知識庫寫回資料夾填 `~/Documents/Difly自動筆記`（新資料夾，別指 obsidian 主庫）
 
-### 待辦優先序（2026-08-22 更新）
-1. LINE Pay 憑證（等商家） 2. 硬體：485/GoDex/kiosk（板子 4 天後到，**先驗板 skb_probe.py sweep**） 3. ~~no-show 自動化~~ ✅（booking HANDOFF A，本日完成） 4. 點選訂位 5. 清 demo 6. 團購 Phase B 7. 加盟商帳號 8. 大櫃
+### 待辦優先序（2026-08-22 晚更新）
+1. LINE Pay 憑證（等商家） 2. 硬體：485/GoDex/kiosk（板子 4 天後到，**先驗板 skb_probe.py sweep**） 3. ~~no-show 自動化~~ ✅（booking HANDOFF A） 4. 點選訂位 5. 清 demo 6. 團購 Phase B 7. 加盟商帳號 8. 大櫃
+9. **排班板手指拖移（touch events）** 10. **一週總表列印** 11. **報表：電話/現場/LINE 來源佔比**
+
+### 本 session（2026-08-22 下午~晚）追加完成
+- **排班拖移全面修好**（booking）：內聯樣式根治 Tailwind 不載入、快速點擊 race 修復、整點實線/半點虛線、快速編輯可直接輸入時長、✏️ 編輯按鈕
+- **no-show 通知克制**：自動判定不逐筆發 LINE（曾轟炸 11 封＋LINE 200 則/月額度用盡）；只寫 logfile、僅停權發一封彙整；寬限期 24h
+- **品牌 DiFly→Dearfly**：booking＋smartlocker＋LINE 通知＋Rich Menu（logo `public/dearfly-logo.png`）
+- **網域**：球場 **dearfly.com.tw**（A 76.76.21.21）、穿線/販售 **shop.dearfly.com.tw**（CNAME cname.vercel-dns.com）；Cloudmax DNS
+- **平板櫃台模式 `/desk`**（老闆最愛）：全螢幕 App（無側欄/頂欄）、電話訂位總表（點空格→下單，source=phone 標記📞）、收款一鍵、今日明細；Header/Footer 在 /desk 自動隱藏
+- **GitHub token 已存鑰匙圈**（push 免登入）；桌面有 `🔄 重啟DSH.command`（一鍵重啟 DSH，改插件後用）
+- **知識庫新增**：19-UI踩坑紀錄、20-CrossCheck兩系統（共用 Neon 表清單、LINE 共用、品牌網址清理、env 交集）
+- **CrossCheck 清理**：booking 首頁穿線/用品連結→shop.dearfly.com.tw；smartlocker Rich Menu SVG 改 Dearfly
+- 3 天測試資料（昨天/今天/明天各 5~7 筆，note=3天測試資料，可重跑 `scripts/seed-3day-test.ts`）
+- LINE 額度：**200/200 用完，等下月重置**（`GET /v2/bot/message/quota` 可查）
