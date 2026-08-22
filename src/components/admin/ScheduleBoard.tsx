@@ -551,21 +551,13 @@ export default function ScheduleBoard({
             );
           })}
 
-          {/* 現在時間紅線（加深＋陰影，確保看得到） */}
+          {/* 現在時間紅線（原生樣式：細線＋時間標籤） */}
           {nowMin >= openMin && nowMin <= closeMin && (
             <div
-              className="pointer-events-none absolute top-0 bottom-0 z-30"
-              style={{
-                left: `${LABEL + ((nowMin - openMin) / SLOT) * CELL - 1}px`,
-                width: 4,
-                backgroundColor: "#dc2626",
-                boxShadow: "0 0 6px rgba(220,38,38,0.8)",
-              }}
+              className="pointer-events-none absolute top-0 bottom-0 z-30 w-0.5 bg-red-500"
+              style={{ left: `${LABEL + ((nowMin - openMin) / SLOT) * CELL}px` }}
             >
-              <span
-                className="absolute -top-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-bold text-white"
-                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.4)" }}
-              >
+              <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-red-500 px-1 py-0.5 text-[10px] font-semibold text-white">
                 {fmtHM(nowMin)}
               </span>
             </div>
