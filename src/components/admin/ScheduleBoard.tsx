@@ -419,7 +419,11 @@ export default function ScheduleBoard({
               <div
                 key={s}
                 style={{
-                  borderLeft: "1px solid #cbd5e1",
+                  // 整點=實線、半點=虛線
+                  borderLeft:
+                    s % 60 === 0
+                      ? "1px solid #94a3b8"
+                      : "1px dashed #cbd5e1",
                   padding: "0 2px",
                   textAlign: "center",
                   fontSize: 10,
@@ -501,7 +505,11 @@ export default function ScheduleBoard({
                     <div
                       key={s}
                       style={{
-                        borderLeft: "1px solid #cbd5e1",
+                        // 整點=實線、半點=虛線
+                        borderLeft:
+                          s % 60 === 0
+                            ? "1px solid #94a3b8"
+                            : "1px dashed #cbd5e1",
                         backgroundColor: s < nowMin ? "rgba(248,250,252,0.7)" : "transparent",
                       }}
                       onClick={() => {
