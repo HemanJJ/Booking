@@ -48,9 +48,15 @@
 
 ## 四、下一個任務
 
-### A. no-show / 營業規則自動化（建議優先）
+### A. no-show / 營業規則自動化 ✅ 已完成（2026-08-22）
 
-營業規則 13 已定稿但尚未自動化：24h 內取消收 10%、no-show 不退、**3 次 no-show 永久停權**。目前停權是後台手動。需要：訂位加「已到場/no-show」標記 → 累計次數 → 自動停權。
+營業規則 13：24h 內取消收 10%、no-show 不退、**3 次 no-show 永久停權**。
+- ✅ 訂位加 `attendance`（pending/arrived/noshow）＋ `attendanceAt`；會員加 `noShowCount`。
+- ✅ 後台訂位列表可標「已到場 / 未到 / 清除」；會員管理顯示未到次數；解鎖時計數歸零。
+- ✅ cron `/api/cron/release` 併入 `autoMarkNoShows()`：訂位結束＋6h 寬限期仍未標到場 → 自動判 no-show、累計、達 3 次自動停權＋LINE 通知店家。
+- ✅ 停權會員前台與代客下單皆擋。
+- 實作：`src/lib/noshow.ts`；驗證：`scripts/smoke-noshow.ts`（本地）。
+- ⚠️ 部署需先對 Neon 手動 `ALTER TABLE ... ADD COLUMN`（attendance/attendanceAt/noShowCount），再 `./deploy.sh`。
 
 ### B. LINE Pay 金流（等商家憑證）
 
@@ -101,7 +107,7 @@ npx tsx scripts/richmenu.ts list   # 看 LINE 圖文選單
 ```
 讀 /Users/defi/Desktop/projects/code/booking/docs/HANDOFF-程式交接.md
 以及 docs/obsidian/ 知識庫（重點：15-營運維護、14-UIUX、13-營業規則）、stringing/HANDOFF.md。
-目前任務：no-show 停權自動化（A）＋前台點選訂位（C）；LINE Pay 等商家憑證。
+目前任務：no-show 停權自動化已完成（A）；下一個是前台點選訂位（C）；LINE Pay 等商家憑證。
 ```
 
 ---

@@ -11,6 +11,7 @@ import {
   markBookingUnpaid,
   generateRecurringBookings,
 } from "@/lib/booking";
+import { markAttendance } from "@/lib/noshow";
 import { sendLineAdminNotify } from "@/lib/notify";
 import { formatPrice } from "@/lib/utils";
 import { logBookingEvent } from "@/lib/audit";
@@ -341,13 +342,23 @@ export async function deleteDurationDiscountAction(
 /** 解析會員：選既有會員 → 用其 id；否則用「臨時客人」姓名＋電話（電話相符就沿用，避免重複建檔） */
 async function resolveMemberId(formData: FormData): Promise<string> {
   const memberId = String(formData.get("memberId") ?? "").trim();
-  if (memberId) return memberId;
+  if (memberId) {
+    const picked = await prisma.member.findUnique({
+      where: { id: memberId },
+      select: { banned: true },
+    });
+    if (picked?.banned) throw new Error("該會員已停權，無法代客下單");
+    return memberId;
+  }
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   if (!name) throw new Error("請選擇會員或輸入臨時客人姓名");
   if (phone) {
     const existing = await prisma.member.findFirst({ where: { phone } });
-    if (existing) return existing.id;
+    if (existing) {
+      if (existing.banned) throw new Error("該會員已停權，無法代客下單");
+      return existing.id;
+    }
   }
   const created = await prisma.member.create({
     data: { name, phone: phone || null },
@@ -590,11 +601,14 @@ export async function adminMoveBookingAction(formData: FormData): Promise<{
   }
 }
 
-/** 解鎖停權會員（no-show 永久停權後人工解除） */
+/** 解鎖停權會員（no-show 永久停權後人工解除；解除後未到次數歸零重新計算） */
 export async function unlockMemberAction(formData: FormData): Promise<void> {
   await requireOwner();
   const id = String(formData.get("id") ?? "");
-  await prisma.member.update({ where: { id }, data: { banned: false } });
+  await prisma.member.update({
+    where: { id },
+    data: { banned: false, noShowCount: 0 },
+  });
   revalidatePath("/admin/members");
 }
 
@@ -604,6 +618,22 @@ export async function banMemberAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (id === admin.id) return;
   await prisma.member.update({ where: { id }, data: { banned: true } });
+  revalidatePath("/admin/members");
+}
+
+/** 標記訂位到場狀態（已到場 / 未到 / 清除標記） */
+export async function markAttendanceAction(formData: FormData): Promise<void> {
+  await requireStaff();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const attendance = String(formData.get("attendance") ?? "") as
+    | "arrived"
+    | "noshow"
+    | "pending";
+  if (!bookingId || !["arrived", "noshow", "pending"].includes(attendance)) {
+    throw new Error("參數錯誤");
+  }
+  await markAttendance(bookingId, attendance, "管理員");
+  revalidatePath("/admin/bookings");
   revalidatePath("/admin/members");
 }
 

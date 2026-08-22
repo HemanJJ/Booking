@@ -33,6 +33,7 @@ export default async function AdminMembersPage() {
               <th className="px-4 py-3 font-medium">手機</th>
               <th className="px-4 py-3 font-medium">登入管道</th>
               <th className="px-4 py-3 font-medium">點數</th>
+              <th className="px-4 py-3 font-medium">未到次數</th>
               <th className="px-4 py-3 font-medium">角色</th>
               <th className="px-4 py-3 font-medium">狀態</th>
               <th className="px-4 py-3 text-right font-medium">操作</th>
@@ -61,6 +62,21 @@ export default async function AdminMembersPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">{m.points}</td>
+                  <td className="px-4 py-3">
+                    {m.noShowCount > 0 ? (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          m.noShowCount >= 3
+                            ? "bg-rose-100 text-rose-600"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {m.noShowCount} 次
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">0</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     {isAdmin ? (
                       <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">

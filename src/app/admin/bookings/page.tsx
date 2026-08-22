@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { adminCancelBookingAction, toggleCashPaymentAction } from "@/app/admin/actions";
+import {
+  adminCancelBookingAction,
+  toggleCashPaymentAction,
+  markAttendanceAction,
+} from "@/app/admin/actions";
 import { formatPrice, formatDate, formatDuration, weekdayOf } from "@/lib/utils";
+import { isBookingEnded } from "@/lib/noshow";
 import AdminWeekSchedule from "@/components/admin/AdminWeekSchedule";
 
 export const metadata: Metadata = {
@@ -21,6 +26,12 @@ const PAYMENT_LABEL: Record<string, string> = {
   cash: "已收現金",
   linepay: "LINE Pay",
   points: "點數",
+};
+
+const ATTENDANCE_LABEL: Record<string, { text: string; cls: string }> = {
+  pending: { text: "未判定", cls: "bg-slate-100 text-slate-500" },
+  arrived: { text: "已到場", cls: "bg-emerald-100 text-emerald-700" },
+  noshow: { text: "未到", cls: "bg-rose-100 text-rose-600" },
 };
 
 export default async function AdminBookingsPage() {
@@ -79,6 +90,7 @@ export default async function AdminBookingsPage() {
                 <th className="px-4 py-3 font-medium">日期時段</th>
                 <th className="px-4 py-3 font-medium">金額</th>
                 <th className="px-4 py-3 font-medium">狀態</th>
+                <th className="px-4 py-3 font-medium">到場</th>
                 <th className="px-4 py-3 font-medium">收款</th>
                 <th className="px-4 py-3 text-right font-medium">操作</th>
               </tr>
@@ -86,8 +98,10 @@ export default async function AdminBookingsPage() {
             <tbody>
               {bookings.map((b) => {
                 const s = STATUS_LABEL[b.status] ?? STATUS_LABEL.confirmed;
+                const a = ATTENDANCE_LABEL[b.attendance] ?? ATTENDANCE_LABEL.pending;
                 const active =
                   b.status !== "cancelled" && b.status !== "released";
+                const ended = isBookingEnded(b.date, b.endTime);
                 return (
                   <tr key={b.id} className="border-t border-slate-100">
                     <td className="px-4 py-3">
@@ -113,6 +127,13 @@ export default async function AdminBookingsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${a.cls}`}
+                      >
+                        {a.text}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       <span className="text-xs text-slate-600">
                         {PAYMENT_LABEL[b.paymentStatus] ?? "未收"}
                       </span>
@@ -121,6 +142,45 @@ export default async function AdminBookingsPage() {
                       <div className="flex items-center justify-end gap-2">
                         {active && (
                           <>
+                            {ended && (
+                              <form action={markAttendanceAction}>
+                                <input
+                                  type="hidden"
+                                  name="bookingId"
+                                  value={b.id}
+                                />
+                                {b.attendance !== "arrived" && (
+                                  <button
+                                    type="submit"
+                                    name="attendance"
+                                    value="arrived"
+                                    className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                                  >
+                                    已到場
+                                  </button>
+                                )}
+                                {b.attendance !== "noshow" && (
+                                  <button
+                                    type="submit"
+                                    name="attendance"
+                                    value="noshow"
+                                    className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                                  >
+                                    未到
+                                  </button>
+                                )}
+                                {b.attendance !== "pending" && (
+                                  <button
+                                    type="submit"
+                                    name="attendance"
+                                    value="pending"
+                                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                                  >
+                                    清除
+                                  </button>
+                                )}
+                              </form>
+                            )}
                             <form action={toggleCashPaymentAction}>
                               <input type="hidden" name="id" value={b.id} />
                               <button

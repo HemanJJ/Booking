@@ -31,6 +31,7 @@ model Member {
   linePictureUrl String?
   points         Int      @default(0) // 會員點數（點數扣抵，未來功能）
   banned         Boolean  @default(false) // no-show 停權（後台人工解鎖）
+  noShowCount    Int      @default(0) // 累計 no-show 次數（3 次自動永久停權）
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -157,6 +158,8 @@ model Booking {
   totalPrice      Int // 折扣後總價
   discountAmount  Int     @default(0) // 時長折扣折抵金額
   status     String   @default("pending") // pending(保留中) | confirmed(已確認) | cancelled(已取消) | released(逾期釋放)
+  attendance String   @default("pending") // pending(未判定) | arrived(已到場) | noshow(未到)
+  attendanceAt DateTime? // 到場/未到標記時間
   paymentStatus String   @default("unpaid") // unpaid(未收) | cash(已收現金) | linepay(LINE Pay) | points(點數)
   reservedAt DateTime? // 保留起始時間（24h 內需繳費，否則自動釋放）
   paidAt     DateTime? // 繳費時間

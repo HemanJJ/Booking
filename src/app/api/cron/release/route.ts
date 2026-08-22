@@ -3,12 +3,14 @@ import {
   releaseExpiredBookings,
   generateRecurringBookings,
 } from "@/lib/booking";
+import { autoMarkNoShows } from "@/lib/noshow";
 
 export const dynamic = "force-dynamic";
 
 /**
  * 定期維護（Vercel Cron 觸發，見 vercel.json crons）：
- * 1) 釋放逾期未付款訂位；2) 生成未來 4 週的固定訂位。
+ * 1) 釋放逾期未付款訂位；2) 生成未來 4 週的固定訂位；
+ * 3) 自動判定已結束未標記的 no-show（累計 3 次自動停權）。
  * 建議在 Vercel 設定 CRON_SECRET，並於 cron 設定的 header 帶
  * `Authorization: Bearer <CRON_SECRET>`。
  */
@@ -20,7 +22,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
   }
-  const released = await releaseExpiredBookings();
-  const created = await generateRecurringBookings();
-  return NextResponse.json({ ok: true, released, created });
+  const [released, created, noshow] = await Promise.all([
+    releaseExpiredBookings(),
+    generateRecurringBookings(),
+    autoMarkNoShows(),
+  ]);
+  return NextResponse.json({ ok: true, released, created, noshow });
 }
