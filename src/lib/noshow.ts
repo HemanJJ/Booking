@@ -10,8 +10,9 @@ import { sendLineAdminNotify } from "./notify";
  * - Member.noShowCount：累計未到次數
  */
 
-/** 寬限期：訂位結束後多久內仍可補標「已到場」？超過則自動判定 no-show */
-export const NO_SHOW_GRACE_HOURS = 6;
+/** 寬限期：訂位結束後多久內仍可補標「已到場」？超過則自動判定 no-show
+ *  （24h：給櫃台一整天的補標時間，避免打完球沒多久就誤判） */
+export const NO_SHOW_GRACE_HOURS = 24;
 /** 累計幾次 no-show 自動永久停權 */
 export const NO_SHOW_BAN_THRESHOLD = 3;
 
@@ -102,7 +103,12 @@ export async function markAttendance(
 /**
  * 自動判定（cron 每小時呼叫）：
  * 掃「已確認＋已結束（含寬限期）＋未標記」的訂位 → 標記 noshow、累計、
- * 達 3 次自動停權並通知店家。回傳本次處理筆數與停權人數。
+ * 達 3 次自動停權。回傳本次處理筆數與停權人數。
+ *
+ * ⚠️ 通知策略（2026-08-22 修正）：
+ * 自動判定**不逐筆發 LINE 通知**——一次掃到多筆舊訂位會瞬間轟炸店家 LINE
+ * （曾把 LINE 每月免費額度一次用完）。改為：只寫 logfile（後台「異動紀錄」可查），
+ * 並在「有人達 3 次停權」時發一封彙整通知。人工標記（後台點「未到」）才逐筆通知。
  */
 export async function autoMarkNoShows(): Promise<{
   marked: number;
@@ -121,6 +127,7 @@ export async function autoMarkNoShows(): Promise<{
 
   let marked = 0;
   let banned = 0;
+  const bannedNames: string[] = [];
   for (const b of candidates) {
     if (!isEndedWithGrace(b.date, b.endTime)) continue;
 
@@ -145,13 +152,19 @@ export async function autoMarkNoShows(): Promise<{
       detail: `自動判定未到(no-show)｜${b.court.venue.name} ${b.court.name}｜${b.date} ${b.startTime}-${b.endTime}｜會員 ${b.member.name}｜累計未到 ${noShowCount} 次${nowBanned ? "（達 3 次已停權）" : ""}`,
     });
 
+    marked++;
+    if (nowBanned) {
+      banned++;
+      bannedNames.push(b.member.name);
+    }
+  }
+
+  // 彙整通知：只有「有人被停權」才發一封（避免逐筆轟炸）
+  if (bannedNames.length > 0) {
     await sendLineAdminNotify(
-      `🚫 自動判定 no-show｜${b.member.name}｜${b.court.venue.name} ${b.court.name}｜${b.date} ${b.startTime}-${b.endTime}｜累計 ${noShowCount}/${NO_SHOW_BAN_THRESHOLD} 次${nowBanned ? " ⛔️ 已自動停權" : ""}`,
+      `⛔️ 自動停權通知｜本次 ${bannedNames.length} 位會員累計 3 次未到已永久停權：${bannedNames.join("、")}。詳見後台「異動紀錄」。`,
       "instant"
     );
-
-    marked++;
-    if (nowBanned) banned++;
   }
   return { marked, banned };
 }
