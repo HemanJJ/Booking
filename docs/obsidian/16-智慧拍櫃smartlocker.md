@@ -72,7 +72,7 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 
 - 標籤內容是**動態**的（每筆訂單的線種/磅數/金額/取件號 + 該店店名）。
 - **列印**：用「Seagull 驅動印中文」同一套方法（`print-label.ps1`），每店 kiosk 跑 `kiosk-poller.mjs`、塞入店名＋訂單資料 → **300 店一致、不需 per-store 灌字型**。
-- **自動帶（已做）**：`kiosk-poller.mjs` 輪詢 `print_jobs` → 用訂單 `label_data` 自動組標籤4行 → 呼叫 `print-label.ps1 -ConfigFile`（中文）；店名從環境變數 `STORE`/`STORE_EN` 帶入。
+- **自動帶（已做＋已驗證）**：`kiosk-print-poller.ps1`（PowerShell，kiosk 無 node 可跑）輪詢 `print_jobs` → 用訂單 `label_data` 自動組標籤4行 → 呼叫 `print-label.ps1 -ConfigFile`（中文，含色"白"）；店名從環境變數 `STORE`/`STORE_EN` 帶入。**kiosk 用 `schtasks`「KioskPrintPoller」常駐**。⚠️ 記得用 `HttpWebRequest+UTF8` 解碼 API（Invoke-RestMethod 會把中文色弄成亂碼）。
 - **店名**：繁體店名（太平永成店/長壽店…）用微軟正黑全覆蓋；紙張用驅動內建 `40 mm x 30 mm`。
 - **不要**走「下載 `.BF2` 字型到印表機」這條（找不到繁體檔＋印表機可能不吃 DOWNLOAD，300 店會超麻煩）。
 
