@@ -31,7 +31,7 @@ created: 2026-08-20
 |------|------|------|
 | UPUS-SKB 鎖控板 | 格口開關 | **485 尚未通**（排查見 smartlocker/README.md） |
 | Win10/Win7 kiosk | 下單＋列印 | 編譯需在 Win 跑 `src/build.bat` |
-| GPRINTER **GP-3120TN** 標籤機 | 印 4×3cm 直式標籤（線種+色/磅數/金額/取件號＋Pai store） | ✅ 已印出；TSPL `SIZE 40 mm,30 mm`。⚠️ 單字節字型、**不吃 BITMAP** → **中文 raw TSPL 印不了**，現用英文/拼音。中文→用 Windows 驅動／下載 TSS24 字型 |
+| GPRINTER **GP-3120TN** 標籤機 | 印 4×3cm 直式標籤（線種+色/磅數/金額/取件號＋店名） | ✅ 已定稿：**Seagull 驅動＋微軟正黑印中文**（`print-label.ps1`）。⚠️ 單字節字型、**不吃 BITMAP**、無內建中文 → raw TSPL 印中文不可行 |
 | RS-485 | 控制格口 | 待整合（SkbBridge 或新寫） |
 | Pi | （可選） | 見 `smartlocker/pi/README.md` |
 
@@ -63,10 +63,18 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 | 部分 | 狀態 |
 |------|------|
 | 雲端閉環（資料模型/下單/後台/列印佇列/LINE 通知） | ✅ 完成、已上線（25/25 本地＋9/9 Neon e2e） |
-| 列印（實體） | ✅ **GPRINTER GP-3120TN 已印出**（TSPL、4×3cm 直式、`raw-print.ps1`＋GBK；欄位全對，語法 `SIZE 40 mm,30 mm`） |
+| 列印（實體） | ✅ **已定稿**（2026-08-23）：Seagull 驅動＋Windows 中文字型印中文（`print-label.ps1`，見 [[12-穿線服務]]「列印」段）。⚠️ raw TSPL 印中文**不可行**（單字節字型＋不吃 BITMAP） |
 | 串接服務 Web App 增強 | ✅ 顏色功能(`strings.colors`)+訂單頁+Rich Menu 6 格（`shop.dearfly.com.tw`） |
 | 格口控制（RS-485） | ⏳ 未動工（串接方案見 [[18-運動商城與進銷存]]／販售規格）|
 | 販售＋進銷存＋配貨 | ✅ 2026-08-21 完成（見 [[18-運動商城與進銷存]]）|
+
+## 300 店擴展（2026-08-23 定方向）
+
+- 標籤內容是**動態**的（每筆訂單的線種/磅數/金額/取件號 + 該店店名）。
+- **列印**：用「Seagull 驅動印中文」同一套方法（`print-label.ps1`），每店 kiosk 跑 `kiosk-poller.mjs`、塞入店名＋訂單資料 → **300 店一致、不需 per-store 灌字型**。
+- **自動帶（已做）**：`kiosk-poller.mjs` 輪詢 `print_jobs` → 用訂單 `label_data` 自動組標籤4行 → 呼叫 `print-label.ps1 -ConfigFile`（中文）；店名從環境變數 `STORE`/`STORE_EN` 帶入。
+- **店名**：繁體店名（太平永成店/長壽店…）用微軟正黑全覆蓋；紙張用驅動內建 `40 mm x 30 mm`。
+- **不要**走「下載 `.BF2` 字型到印表機」這條（找不到繁體檔＋印表機可能不吃 DOWNLOAD，300 店會超麻煩）。
 
 ## 注意 / 地雷
 
