@@ -17,10 +17,11 @@ created: 2026-08-20
 |----|------|------|
 | 雲端（web） | `code/smartlocker/web` | ✅ 上線（含穿線 API） |
 | 規格文件 | `code/stringing/` | ✅ 定稿＋已 push |
-| 硬體 | **Win10** kiosk＋GoDex 印表機＋RS-485 鎖控板 | ⏳ 現場另做（方案 A：畫面住雲端）|
+| 硬體 | **Win10** kiosk＋**GPRINTER GP-3120TN** 標籤機＋RS-485 鎖控板 | 印表機 ✅；485 ⏳ |
 
-- 雲端網址：`https://smartlocker-alpha.vercel.app`
-- 部署：`cd code/smartlocker/web && ./deploy.sh`（Root Directory 已設 `web`）
+- 雲端網址：`https://shop.dearfly.com.tw`（原 `smartlocker-alpha` 已改）
+- 部署（從 repo 根目錄）：`cd smartlocker && VERCEL_ORG_ID=… VERCEL_PROJECT_ID=… npx vercel --prod`
+  ⚠️ 不要從 `web/` 內跑（Root Directory 已設 `web`，跑錯會 404）
 - 健康檢查：`/api/health`（已接 UptimeRobot）
 - 資料庫：與 booking **共用同一個 Neon**（見 [[15-營運維護]] 地雷）
 
@@ -30,7 +31,7 @@ created: 2026-08-20
 |------|------|------|
 | UPUS-SKB 鎖控板 | 格口開關 | **485 尚未通**（排查見 smartlocker/README.md） |
 | Win10/Win7 kiosk | 下單＋列印 | 編譯需在 Win 跑 `src/build.bat` |
-| GoDex EZ120 印表機 | 印 2×3" 貼紙（QR+線種+磅數+費用） | 對位需實測 |
+| GPRINTER **GP-3120TN** 標籤機 | 印 4×3cm 直式標籤（線種+色/磅數/金額/取件號＋Pai store） | ✅ 已印出；TSPL `SIZE 40 mm,30 mm`。⚠️ 單字節字型、**不吃 BITMAP** → **中文 raw TSPL 印不了**，現用英文/拼音。中文→用 Windows 驅動／下載 TSS24 字型 |
 | RS-485 | 控制格口 | 待整合（SkbBridge 或新寫） |
 | Pi | （可選） | 見 `smartlocker/pi/README.md` |
 
@@ -49,8 +50,8 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 
 | 用途 | 網址 |
 |------|------|
-| Kiosk 下單（穿線） | `https://smartlocker-alpha.vercel.app/order` |
-| 員工後台 | `https://smartlocker-alpha.vercel.app/admin` |
+| Kiosk 下單（穿線） | `https://shop.dearfly.com.tw/order` |
+| 員工後台 | `https://shop.dearfly.com.tw/admin` |
 | 格口模擬板（本機） | `http://localhost:4321/` |
 
 ## 穿線狀態機（見 [[12-穿線服務]]）
@@ -62,7 +63,8 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 | 部分 | 狀態 |
 |------|------|
 | 雲端閉環（資料模型/下單/後台/列印佇列/LINE 通知） | ✅ 完成、已上線（25/25 本地＋9/9 Neon e2e） |
-| 列印（雲端側） | ✅ 完成；GoDex 實體對位待硬體測 |
+| 列印（實體） | ✅ **GPRINTER GP-3120TN 已印出**（TSPL、4×3cm 直式、`raw-print.ps1`＋GBK；欄位全對，語法 `SIZE 40 mm,30 mm`） |
+| 串接服務 Web App 增強 | ✅ 顏色功能(`strings.colors`)+訂單頁+Rich Menu 6 格（`shop.dearfly.com.tw`） |
 | 格口控制（RS-485） | ⏳ 未動工（串接方案見 [[18-運動商城與進銷存]]／販售規格）|
 | 販售＋進銷存＋配貨 | ✅ 2026-08-21 完成（見 [[18-運動商城與進銷存]]）|
 

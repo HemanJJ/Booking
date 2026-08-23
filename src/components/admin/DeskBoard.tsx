@@ -410,7 +410,7 @@ function PhoneBookModal({
         <input type="hidden" name="durationMinutes" value={durationMinutes} />
         <input type="hidden" name="payNow" value={payNow} />
         <input type="hidden" name="source" value="phone" />
-        <input type="hidden" name="returnTo" value="/admin/desk" />
+        <input type="hidden" name="returnTo" value="/desk" />
         <input type="hidden" name="memberId" value={walkIn ? "" : memberId} />
         <input type="hidden" name="name" value={walkIn ? name : ""} />
         <input type="hidden" name="phone" value={walkIn ? phone : ""} />
