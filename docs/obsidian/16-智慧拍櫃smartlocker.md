@@ -63,7 +63,7 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 | 部分 | 狀態 |
 |------|------|
 | 雲端閉環（資料模型/下單/後台/列印佇列/LINE 通知） | ✅ 完成、已上線（25/25 本地＋9/9 Neon e2e） |
-| 列印（實體） | ✅ **已定稿**（2026-08-23）：Seagull 驅動＋Windows 中文字型印中文（`print-label.ps1`，見 [[12-穿線服務]]「列印」段）。⚠️ raw TSPL 印中文**不可行**（單字節字型＋不吃 BITMAP） |
+| 列印（實體） | ✅ **已定稿**（2026-08-23）：Seagull 驅動＋Windows 中文字型印中文（`print-label.ps1`）。⚠️ raw TSPL 印中文**不可行**（單字節字型＋不吃 BITMAP）。**`-NoPrint` 開關**：印表機移除時設此旗標→略過列印，其餘照常 |
 | 串接服務 Web App 增強 | ✅ 顏色功能(`strings.colors`)+訂單頁+Rich Menu 6 格（`shop.dearfly.com.tw`） |
 | 格口控制（RS-485） | ⏳ 未動工（串接方案見 [[18-運動商城與進銷存]]／販售規格）|
 | 販售＋進銷存＋配貨 | ✅ 2026-08-21 完成（見 [[18-運動商城與進銷存]]）|
