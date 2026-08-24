@@ -52,11 +52,20 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 |------|------|
 | Kiosk 下單（穿線） | `https://shop.dearfly.com.tw/order` |
 | 員工後台 | `https://shop.dearfly.com.tw/admin` |
+| 線種管理（店長自行加線） | `https://shop.dearfly.com.tw/admin/strings` |
+| 下單 UI 打樣 | `https://shop.dearfly.com.tw/kiosk-mockup.html` |
 | 格口模擬板（本機） | `http://localhost:4321/` |
 
 ## 穿線狀態機（見 [[12-穿線服務]]）
 
 `待收件 → 穿線中 → 待取件 → 已完成`（+ `paid` 付款狀態）。**格子是流動的**：交拍格 ≠ 取件格。
+
+## 前台下單（2026-08-24 改版：品牌分組、一框無滑）
+
+- `/order`＝**4 屏 drill-down**（品牌 → 線種 → 磅數＋顏色 → 確認），每屏一框、大熱區、無 scroll。品牌 chips／線種 grid 全依 `strings.brand` 動態生成 → 48+ 線種照樣擴充（加品牌就行）。
+- **線種管理**：員工後台 `admin/strings`，店長自行新增/編輯/停用（`upsertString`/`updateString`/`disableString`）。`brand` 自動推導（`splitBrand`：AL/YOUNG/BG/KIZUNA/DEARFLY，否則取第一個詞）。
+- **首頁**（`/`）：寄拍穿線（綠，圖＝**VICTOR 穿線機 SVG**）、羽球用品（藍）、泡麵（橘）、取件（**粉桃紅 #ec4899**，跟泡麵橘分開、非警示色）。穿線圖元件＝`web/src/components/StringMachineIcon.tsx`。
+- 強制淺色底 `#f4f6f8`（照打樣，避免系統深色模式對比差）。
 
 ## 目前進度
 
@@ -65,6 +74,8 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 | 雲端閉環（資料模型/下單/後台/列印佇列/LINE 通知） | ✅ 完成、已上線（25/25 本地＋9/9 Neon e2e） |
 | 列印（實體） | ✅ **已定稿**（2026-08-23）：Seagull 驅動＋Windows 中文字型印中文（`print-label.ps1`）。⚠️ raw TSPL 印中文**不可行**（單字節字型＋不吃 BITMAP）。**`-NoPrint` 開關**：印表機移除時設此旗標→略過列印，其餘照常 |
 | 串接服務 Web App 增強 | ✅ 顏色功能(`strings.colors`)+訂單頁+Rich Menu 6 格（`shop.dearfly.com.tw`） |
+| 線種品牌分組＋店長管理 | ✅ 2026-08-24：`brand` 欄位＋`/admin/strings` 自行新增/編輯/停用（48+ 線種擴充，不需發版） |
+| 下單頁品牌分組一框無滑 | ✅ 2026-08-24：`/order` 4 屏 drill-down + 首頁改色/穿線機 SVG（見「前台下單」） |
 | 格口控制（RS-485） | ⏳ 未動工（串接方案見 [[18-運動商城與進銷存]]／販售規格）|
 | 販售＋進銷存＋配貨 | ✅ 2026-08-21 完成（見 [[18-運動商城與進銷存]]）|
 
