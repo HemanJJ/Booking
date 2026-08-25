@@ -16,6 +16,18 @@ export default function Footer() {
         <p className="text-xs text-slate-400">
           營業時間以各場地公告為準。本頁為系統重建示範，實際場地資訊請以現場為準。
         </p>
+        <p className="text-xs text-slate-400">© 2026 迪飛羽球館 All Rights Reserved.</p>
+        <p className="text-xs text-slate-400">
+          System by{" "}
+          <a
+            href="https://linebot.my.canva.site/ai-landing-page"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-400 underline-offset-2 hover:text-slate-600"
+          >
+            SEQO
+          </a>
+        </p>
       </div>
     </footer>
   );
