@@ -69,12 +69,14 @@ export default function DeskBoard({
   members,
   stats,
   today,
+  role = "staff",
 }: {
   courts: Court[];
   bookings: DeskBooking[];
   members: MemberOption[];
   stats: { totalBookings: number; revenue: number; unpaidCount: number };
   today: string;
+  role?: string;
 }) {
   const [tab, setTab] = useState<"home" | "board" | "pay" | "list">("home");
   const [openCourt, setOpenCourt] = useState<string | null>(null);
@@ -82,6 +84,9 @@ export default function DeskBoard({
   const [selected, setSelected] = useState<DeskBooking | null>(null);
   const [nowMin, setNowMin] = useState(nowMinutes);
   const [error, setError] = useState("");
+  // 館長才有完整管理（拖移/編輯/取消）；staff 只做電話訂位/收款/明細
+  const isOwner = role === "admin";
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   // 時段格：每 30 分，從最早開門到最晚關門
   const openMin = useMemo(() => Math.min(...courts.map((c) => toMin(c.openingTime))), [courts]);
@@ -91,6 +96,34 @@ export default function DeskBoard({
     for (let t = openMin; t + SLOT <= closeMin; t += SLOT) out.push(t);
     return out;
   }, [openMin, closeMin]);
+
+  // 進排班總表時：自動滑到「現在」（預設顯示現在～+4h 視窗）
+  useEffect(() => {
+    if (tab === "board") {
+      const el = scrollerRef.current;
+      if (!el) return;
+      // 把「現在」滑到畫面約 1/4 處，後面留 4 小時可視
+      const nowSlot = clamp(Math.round((nowMin - openMin) / SLOT), 0, slotStarts.length - 1);
+      const targetLeft = nowSlot * CELL - Math.max(el.clientWidth * 0.25, 0);
+      el.scrollTo({ left: Math.max(targetLeft, 0), behavior: "smooth" });
+    }
+  }, [tab]); // 只進 tab 時跳一次；之後用手動按鈕
+
+  // 「跳到現在」＋左右快捷
+  // offsetMin = 0 → 跳到「現在」；非 0 → 從「當前捲動位置」相對跳（前/後 2 小時）
+  function jumpTo(offsetMin: number) {
+    const el = scrollerRef.current;
+    if (!el) return;
+    let target: number;
+    if (offsetMin === 0) {
+      target = clamp(Math.round((nowMin - openMin) / SLOT), 0, slotStarts.length - 1);
+    } else {
+      const curSlot = clamp(Math.round(el.scrollLeft / CELL), 0, slotStarts.length - 1);
+      target = clamp(curSlot + offsetMin / SLOT, 0, slotStarts.length - 1);
+    }
+    const left = target * CELL - el.clientWidth * 0.25;
+    el.scrollTo({ left: Math.max(left, 0), behavior: "smooth" });
+  }
 
   useEffect(() => {
     const t = setInterval(() => setNowMin(nowMinutes()), 30_000);
@@ -268,7 +301,9 @@ export default function DeskBoard({
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <BigBtn bg="#059669" icon="📞" label="電話訂位" sub="點空格直接記" onClick={() => setTab("board")} />
-            <BigBtn bg="#2563eb" icon="🕐" label="排班總表" sub="拖移改時間／點色塊編輯" onClick={() => setTab("board")} />
+            {isOwner && (
+              <BigBtn bg="#2563eb" icon="🕐" label="排班總表" sub="拖移改時間／點色塊編輯" onClick={() => setTab("board")} />
+            )}
             <BigBtn bg="#d97706" icon="💵" label="收款" sub="未收 → 已收" onClick={() => setTab("pay")} />
             <BigBtn bg="#7c3aed" icon="📋" label="今日明細" sub="全部訂位" onClick={() => setTab("list")} />
           </div>
@@ -290,15 +325,51 @@ export default function DeskBoard({
       {tab === "board" && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <h2 style={{ fontSize: 20 }}>🕐 排班總表</h2>
+            <h2 style={{ fontSize: 20 }}>{isOwner ? "🕐 排班總表" : "📞 電話訂位"}</h2>
             <span style={{ fontSize: 14, color: "#64748b", fontWeight: 600 }}>{today}（{weekdayOf(today)}）</span>
+          </div>
+          {/* 跳到現在＋左右快捷（11 吋平板不用手滑） */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <button
+              type="button"
+              onClick={() => jumpTo(0)}
+              style={{
+                flex: 1, height: 52, borderRadius: 12, border: "none",
+                background: "#059669", color: "#fff", fontSize: 17, fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              📍 現在
+            </button>
+            <button
+              type="button"
+              onClick={() => jumpTo(-120)}
+              style={{
+                flex: 1, height: 52, borderRadius: 12, border: "1px solid #cbd5e1",
+                background: "#fff", color: "#475569", fontSize: 17, fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              ⬅ 前2小時
+            </button>
+            <button
+              type="button"
+              onClick={() => jumpTo(120)}
+              style={{
+                flex: 1, height: 52, borderRadius: 12, border: "1px solid #cbd5e1",
+                background: "#fff", color: "#475569", fontSize: 17, fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              ➡ 後2小時
+            </button>
           </div>
           {error && (
             <div style={{ background: "#fef2f2", color: "#b91c1c", borderRadius: 10, padding: "10px 14px", fontSize: 14, marginBottom: 10 }}>
               {error}
             </div>
           )}
-          <div style={{ overflowX: "auto", background: "#fff", borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
+          <div ref={scrollerRef} style={{ overflowX: "auto", background: "#fff", borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
             <div
               ref={boardRef}
               style={{ position: "relative", userSelect: "none", width: LABEL + slotStarts.length * CELL }}
@@ -353,7 +424,7 @@ export default function DeskBoard({
                       ))}
                     </div>
 
-                    {/* 訂位色塊（可拖移、可點編輯） */}
+                    {/* 訂位色塊（可拖移、可點編輯；僅館長） */}
                     {courtBookings.map((b) => {
                       const startMin = toMin(b.startTime);
                       const left = ((startMin - openMin) / SLOT) * CELL;
@@ -361,23 +432,27 @@ export default function DeskBoard({
                       return (
                         <div
                           key={b.id}
-                          onTouchStart={(e) => {
-                            const t = e.touches[0];
-                            if (t) onGrabDown({ clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() }, b, true);
-                          }}
-                          onMouseDown={(e) => {
-                            if (touchActiveRef.current) return; // 觸控補發的相容 mouse 事件，忽略
-                            onGrabDown(e, b, false);
-                          }}
-                          onClick={(e) => {
-                            if (dragRef.current?.moved) return; // 真的拖動過才擋
-                            setSelected(b);
-                            e.stopPropagation();
-                          }}
+                          {...(isOwner
+                            ? {
+                                onTouchStart: (e: React.TouchEvent) => {
+                                  const t = e.touches[0];
+                                  if (t) onGrabDown({ clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() }, b, true);
+                                },
+                                onMouseDown: (e: React.MouseEvent) => {
+                                  if (touchActiveRef.current) return;
+                                  onGrabDown(e, b, false);
+                                },
+                                onClick: (e: React.MouseEvent) => {
+                                  if (dragRef.current?.moved) return;
+                                  setSelected(b);
+                                  e.stopPropagation();
+                                },
+                              }
+                            : {})}
                           style={{
                             position: "absolute",
                             zIndex: 20,
-                            cursor: "grab",
+                            cursor: isOwner ? "grab" : "default",
                             overflow: "hidden",
                             borderRadius: 10,
                             padding: "6px 8px",
@@ -385,14 +460,14 @@ export default function DeskBoard({
                             top: 4,
                             width: Math.max(width - 4, 24),
                             height: ROW_H - 8,
-                            touchAction: "none",
+                            touchAction: isOwner ? "none" : "auto",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                             // 內聯背景色（避免 Tailwind class 漏載變成白格）
                             backgroundColor: b.status === "pending" ? "#f59e0b" : "#059669",
                             color: "#fff",
                             fontSize: 13,
                           }}
-                          title={`${b.startTime}–${b.endTime} · ${b.memberName}`}
+                          title={`${b.startTime}–${b.endTime} · ${b.memberName}${isOwner ? "" : "（僅館長可編輯）"}`}
                         >
                           <p style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, fontSize: 13 }}>
                             {width > 88 ? `${b.startTime}–${b.endTime}` : b.startTime}
@@ -400,24 +475,26 @@ export default function DeskBoard({
                           <p style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: 0.92, fontSize: 12 }}>
                             {b.memberName}
                           </p>
-                          {/* 右緣拉時長把手 */}
-                          <div
-                            onTouchStart={(e) => {
-                              e.stopPropagation();
-                              const t = e.touches[0];
-                              if (t) onResizeDown({ clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() }, b, true);
-                            }}
-                            onMouseDown={(e) => { if (touchActiveRef.current) return; e.stopPropagation(); onResizeDown(e, b, false); }}
-                            style={{
-                              position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 30,
-                              cursor: "ew-resize", width: 18,
-                              borderLeft: "2px solid rgba(255,255,255,0.65)",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                            }}
-                            title="拖右緣調整時長"
-                          >
-                            <span style={{ fontSize: 11, opacity: 0.9, writingMode: "vertical-rl" }}>⠿</span>
-                          </div>
+                          {/* 右緣拉時長把手（僅館長） */}
+                          {isOwner && (
+                            <div
+                              onTouchStart={(e) => {
+                                e.stopPropagation();
+                                const t = e.touches[0];
+                                if (t) onResizeDown({ clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() }, b, true);
+                              }}
+                              onMouseDown={(e) => { if (touchActiveRef.current) return; e.stopPropagation(); onResizeDown(e, b, false); }}
+                              style={{
+                                position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 30,
+                                cursor: "ew-resize", width: 18,
+                                borderLeft: "2px solid rgba(255,255,255,0.65)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}
+                              title="拖右緣調整時長"
+                            >
+                              <span style={{ fontSize: 11, opacity: 0.9, writingMode: "vertical-rl" }}>⠿</span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -491,8 +568,8 @@ export default function DeskBoard({
               <button
                 key={b.id}
                 type="button"
-                onClick={() => setSelected(b)}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 12px", borderBottom: "1px solid #f1f5f9", background: "none", width: "100%", textAlign: "left", cursor: "pointer", border: "none" }}
+                onClick={() => isOwner && setSelected(b)}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 12px", borderBottom: "1px solid #f1f5f9", background: "none", width: "100%", textAlign: "left", cursor: isOwner ? "pointer" : "default", border: "none" }}
               >
                 <div style={{ fontSize: 15 }}>
                   <b>{b.startTime}–{b.endTime}</b> {b.memberName}
@@ -510,7 +587,7 @@ export default function DeskBoard({
       {/* ===== 底部導覽 ===== */}
       <div style={{ position: "sticky", bottom: 0, background: "#fff", borderTop: "1px solid #e2e8f0", display: "flex", marginTop: 16 }}>
         <NavBtn on={tab === "home"} icon="🏠" label="首頁" onClick={() => setTab("home")} />
-        <NavBtn on={tab === "board"} icon="🕐" label="排班" onClick={() => setTab("board")} />
+        {isOwner && <NavBtn on={tab === "board"} icon="🕐" label="排班" onClick={() => setTab("board")} />}
         <NavBtn on={tab === "pay"} icon="💵" label="收款" onClick={() => setTab("pay")} />
         <NavBtn on={tab === "list"} icon="📋" label="明細" onClick={() => setTab("list")} />
       </div>

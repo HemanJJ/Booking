@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { localDateString } from "@/lib/utils";
+import { getCurrentMember } from "@/lib/auth";
 import DeskBoard from "@/components/admin/DeskBoard";
 
 export const metadata: Metadata = {
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 /** 平板櫃台模式：電話訂位總表＋收款＋明細（櫃員/第一線高頻操作） */
 export default async function AdminDeskPage() {
   const today = localDateString(new Date());
+  const member = await getCurrentMember();
 
   const [courts, bookings, members] = await Promise.all([
     prisma.court.findMany({
@@ -67,6 +69,7 @@ export default async function AdminDeskPage() {
       members={members}
       stats={{ totalBookings, revenue, unpaidCount }}
       today={today}
+      role={member?.role ?? "member"}
     />
   );
 }
