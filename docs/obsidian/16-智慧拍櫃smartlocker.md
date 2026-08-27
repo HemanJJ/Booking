@@ -87,6 +87,35 @@ open code/smartlocker/kiosk/README-kiosk.md               # Win 建置手冊
 - **店名**：繁體店名（太平永成店/長壽店…）用微軟正黑全覆蓋；紙張用驅動內建 `40 mm x 30 mm`。
 - **不要**走「下載 `.BF2` 字型到印表機」這條（找不到繁體檔＋印表機可能不吃 DOWNLOAD，300 店會超麻煩）。
 
+## demo/開發環境與近期改動（2026-08-26/27）
+
+### 三套環境（正式／網外 demo／本機開發）
+| 系統 | 正式 | 網外 demo | 本機開發 |
+|------|------|-----------|----------|
+| 智慧拍櫃（穿線+進銷存） | shop.dearfly.com.tw | **demo.dearfly.com.tw**（後台 demo1234） | `smartlocker-demo`，localhost:3000 |
+| 羽球場預約 booking | dearfly.com.tw | **booking-demo.dearfly.com.tw**（admin@difly.tw / demo1234，登入 /account/login） | `booking-demo`，localhost:3001（SQLite 離線） |
+
+- 兩套 demo 都是**獨立資料庫、獨立 Vercel 專案**，隨便增刪查不碰正式。外人直接開 demo 網址即可試客人端，後台用 demo1234。
+- 一鍵啟動：工作站 Dashboard「🔐 智慧拍櫃 Web」「🏸 羽球場預約」＋各資料夾 `🚀 啟動…command`。
+- booking demo：資料庫 Neon `booking-demo`（Postgres）；本機用 SQLite（`prisma.config.ts` 依 DATABASE_URL 自動切 SQLite/Postgres）。
+- **進銷存 demo 是多店結構**：迪飛太平(分店)＋迪飛總倉＋迪飛長壽店(分店)，供「配貨 總倉→店家」示範。
+
+### 近期 UI／功能
+- **favicon**：換成迪飛自有 icon（移除 Vercel 預設），smartlocker＋booking 兩站都換。
+- **版權宣告**：右下角「© 2026 迪飛羽球館 All Rights Reserved.」＋「System by SEQO」（連結 SEQO landing）。
+- **/order 步驟導引**：右上「1/4」＋一排字 → 改「物流式 4 階段進度條」（icon＋打勾＋連線，當前亮綠）。
+- **線種上架/停售開關**：`/admin/strings` 新增＋編輯都顯示「在售/停售」下拉；停用列有「上架」鈕。
+- **後台深色模式修復**：各 admin 頁強制淺底(#f5f5f5)＋深字，避免系統深色模式白字糊掉。
+
+### bug 修復（全新空庫才會踩）
+- `vending.ts` 種子 `ON CONFLICT (sku)` → `(venue_id, sku)`（多店唯一鍵）。
+- `ensureVendingSchema` 補 `min_qty` 欄位（listAllInventory 有查、但只有進銷存 ensureStockSchema 才加）。
+
+### Vercel 坑（新建專案必看）
+- 新專案 **Framework Preset 預設「Other」**（不是 Next.js）→ 整站 404。`vercel project update <name> --framework nextjs --yes`。
+- 新專案預設開 **SSO 部署保護** → `.vercel.app` 未登入導去 vercel.com。`vercel project protection disable <name> --sso`。
+- 子網域：`vercel domains add <sub>.<domain> <project>`，再在第三方 DNS（ns1.ix1000.com）加 CNAME。
+
 ## 注意 / 地雷
 
 - ⚠️ **Root Directory 已修**（2026-08-20 設 `web`），否則 `git push` 會把 production 搞 404。
