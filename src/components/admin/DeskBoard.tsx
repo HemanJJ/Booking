@@ -766,20 +766,10 @@ function PhoneBookModal({
   const [pickerPhone, setPickerPhone] = useState("");
   const [pickerLineId, setPickerLineId] = useState("");
 
-  // 鍵盤（visualViewport）：手機/平板喚起鍵盤時，對話框收到鍵盤上方，不再被蓋住
-  const [vp, setVp] = useState({ top: 0, height: 0 });
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const sync = () => setVp({ top: vv.offsetTop, height: vv.height });
-    sync();
-    vv.addEventListener("resize", sync);
-    vv.addEventListener("scroll", sync);
-    return () => {
-      vv.removeEventListener("resize", sync);
-      vv.removeEventListener("scroll", sync);
-    };
-  }, []);
+  // 鍵盤：用 CSS「頂部對齊 + 可捲動 + 聚焦捲入可見區」，不重渲染、不失焦
+  const scrollInto = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.scrollIntoView({ block: "nearest" });
+  };
 
   const [state, action, pending] = useActionState(adminCreateBookingAction, {} as AdminState);
 
@@ -828,9 +818,8 @@ function PhoneBookModal({
   return (
     <div
       style={{
-        position: "fixed", top: vp.top || 0, left: 0, width: "100%",
-        height: vp.height ? `${vp.height}px` : "100vh", zIndex: 60, overflowY: "auto",
-        backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+        position: "fixed", inset: 0, zIndex: 60, overflowY: "auto",
+        backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 12,
       }}
       onClick={onClose}
     >
@@ -943,9 +932,8 @@ function PhoneBookModal({
       {pickerOpen && (
         <div
           style={{
-            position: "fixed", top: vp.top || 0, left: 0, width: "100%",
-            height: vp.height ? `${vp.height}px` : "100vh", zIndex: 70,
-            backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+            position: "fixed", inset: 0, zIndex: 70,
+            backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 12, overflowY: "auto",
           }}
           onClick={() => setPickerOpen(false)}
         >
@@ -974,7 +962,7 @@ function PhoneBookModal({
             {pickerMode === "search" ? (
               <div style={{ marginTop: 12 }}>
                 <input type="text" placeholder="模糊搜尋姓名／電話"
-                  value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)}
+                  value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)} onFocus={scrollInto}
                   style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
                 <div style={{ marginTop: 6, maxHeight: 240, overflowY: "auto", borderRadius: 12, border: "1px solid #e2e8f0" }}>
                   {pq === "" && (<div style={{ padding: "10px 14px", fontSize: 13, color: "#94a3b8" }}>輸入姓名或電話開始搜尋…</div>)}
@@ -998,11 +986,11 @@ function PhoneBookModal({
               </div>
             ) : (
               <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                <input type="text" placeholder="姓名（必填）" value={pickerName} onChange={(e) => setPickerName(e.target.value)} autoFocus
+                <input type="text" placeholder="姓名（必填）" value={pickerName} onChange={(e) => setPickerName(e.target.value)} autoFocus onFocus={scrollInto}
                   style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
-                <input type="tel" inputMode="tel" placeholder="電話（選填）" value={pickerPhone} onChange={(e) => setPickerPhone(e.target.value)}
+                <input type="tel" inputMode="tel" placeholder="電話（選填）" value={pickerPhone} onChange={(e) => setPickerPhone(e.target.value)} onFocus={scrollInto}
                   style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
-                <input type="text" inputMode="text" placeholder="LINE ID（選填）" value={pickerLineId} onChange={(e) => setPickerLineId(e.target.value)}
+                <input type="text" inputMode="text" placeholder="LINE ID（選填）" value={pickerLineId} onChange={(e) => setPickerLineId(e.target.value)} onFocus={scrollInto}
                   style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                   <button type="button" onClick={() => setPickerOpen(false)}
