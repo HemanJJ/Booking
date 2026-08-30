@@ -754,6 +754,7 @@ function PhoneBookModal({
   const [durationMinutes, setDurationMinutes] = useState(90);
   const [memberId, setMemberId] = useState("");
   const [memberQuery, setMemberQuery] = useState("");
+  const [searching, setSearching] = useState(false); // 輸入才展開第二層選單
   const [walkIn, setWalkIn] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -762,12 +763,17 @@ function PhoneBookModal({
   const [state, action, pending] = useActionState(adminCreateBookingAction, {} as AdminState);
 
   const q = memberQuery.trim().toLowerCase();
-  const filtered = members.filter(
-    (m) =>
-      !q ||
-      m.name.toLowerCase().includes(q) ||
-      (m.phone ?? "").includes(q)
-  );
+  const filtered = members
+    .filter(
+      (m) =>
+        !q ||
+        m.name.toLowerCase().includes(q) ||
+        (m.phone ?? "").includes(q)
+    )
+    .slice(0, 5);
+
+  // 已選到會員 → 顯示鎖定狀態（不再展開清單）
+  const lockedMember = members.find((m) => m.id === memberId);
   const canSubmit = !!court && (!walkIn ? !!memberId : name.trim().length > 0);
 
   return (
@@ -782,8 +788,9 @@ function PhoneBookModal({
         action={action}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: "100%", maxWidth: 460, background: "#fff", borderRadius: 20, padding: 24,
-          boxShadow: "0 20px 60px rgba(0,0,0,.35)", maxHeight: "88vh", overflowY: "auto",
+          width: "100%", maxWidth: 440, background: "#fff", borderRadius: 20, padding: "18px 20px",
+          boxShadow: "0 20px 60px rgba(0,0,0,.35)",
+          maxHeight: "92vh", overflowY: "auto",
         }}
       >
         <input type="hidden" name="courtId" value={court?.id ?? ""} />
@@ -798,96 +805,122 @@ function PhoneBookModal({
         <input type="hidden" name="phone" value={walkIn ? phone : ""} />
         <input type="hidden" name="note" value="📞 電話訂位" />
 
-        <h2 style={{ fontSize: 21, marginBottom: 2 }}>📞 電話訂位</h2>
-        <div style={{ fontSize: 14, color: "#64748b", marginBottom: 12 }}>
-          {court?.venueName} · {court?.name} · {date} {startTime} 起
+        {/* 標題＋場次：一行 */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <h2 style={{ fontSize: 19 }}>📞 電話訂位</h2>
+          <span style={{ fontSize: 13, color: "#64748b" }}>{court?.name} · {startTime} 起</span>
         </div>
 
-        {/* 時長 */}
-        <div style={{ fontSize: 15, fontWeight: 700, margin: "12px 0 8px" }}>時長</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {DURATIONS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setDurationMinutes(m)}
-              style={{
-                minHeight: 48, padding: "0 16px", borderRadius: 12,
-                border: `2px solid ${durationMinutes === m ? "#059669" : "#cbd5e1"}`,
-                background: durationMinutes === m ? "#ecfdf5" : "#fff",
-                color: durationMinutes === m ? "#059669" : "#0f172a",
-                fontSize: 15, fontWeight: 700, cursor: "pointer",
-              }}
-            >
-              {m === 60 ? "1 小時" : m === 90 ? "1.5 小時" : m === 120 ? "2 小時" : `${m} 分`}
-            </button>
-          ))}
+        {/* 時長：一行（下拉＋快捷） */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}>時長</span>
+          <select
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            style={{ flex: 1, height: 46, border: "2px solid #cbd5e1", borderRadius: 12, padding: "0 12px", fontSize: 16, background: "#fff" }}
+          >
+            {DURATIONS.map((m) => (
+              <option key={m} value={m}>{m === 60 ? "1 小時" : m === 90 ? "1.5 小時" : m === 120 ? "2 小時" : `${m} 分`}</option>
+            ))}
+          </select>
+          <button type="button" onClick={() => setDurationMinutes(Math.min(durationMinutes + 30, 240))}
+            style={{ height: 46, padding: "0 14px", borderRadius: 12, border: "1px solid #cbd5e1", background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+            ＋30
+          </button>
         </div>
 
         {/* 客人 */}
-        <div style={{ fontSize: 15, fontWeight: 700, margin: "14px 0 8px" }}>客人</div>
+        <div style={{ fontSize: 15, fontWeight: 700, margin: "12px 0 6px" }}>客人</div>
         {!walkIn ? (
           <div>
-            <input
-              type="text"
-              placeholder="搜尋會員（姓名／電話）"
-              value={memberQuery}
-              onChange={(e) => setMemberQuery(e.target.value)}
-              style={{ width: "100%", height: 52, fontSize: 18, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px", marginBottom: 8 }}
-            />
-            <div style={{ maxHeight: 160, overflowY: "auto", borderRadius: 12, border: "1px solid #e2e8f0" }}>
-              {filtered.slice(0, 8).map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setMemberId(m.id)}
-                  style={{
-                    display: "block", width: "100%", textAlign: "left", padding: "12px 14px",
-                    border: "none", background: memberId === m.id ? "#ecfdf5" : "#fff",
-                    fontSize: 16, fontWeight: 600, cursor: "pointer",
-                  }}
-                >
-                  {m.name} <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>{m.phone ?? ""}</span>
-                  {memberId === m.id ? " ✓" : ""}
+            {lockedMember ? (
+              // 已選到會員 → 顯示鎖定狀態，可重選
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 52, borderRadius: 12, border: "2px solid #059669", background: "#ecfdf5", padding: "0 14px" }}>
+                <span style={{ fontSize: 17, fontWeight: 700, color: "#059669" }}>
+                  ✓ {lockedMember.name} <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>{lockedMember.phone ?? ""}</span>
+                </span>
+                <button type="button" onClick={() => { setMemberId(""); setSearching(false); }}
+                  style={{ border: "none", background: "none", color: "#059669", fontSize: 14, cursor: "pointer" }}>
+                  重選
                 </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => { setWalkIn(true); setMemberId(""); }}
-              style={{ marginTop: 8, border: "none", background: "none", color: "#059669", fontSize: 15, fontWeight: 700, cursor: "pointer" }}
-            >
-              ＋ 臨時客人（輸入姓名＋電話）
-            </button>
+              </div>
+            ) : (
+              <>
+                {/* 搜尋框：預設不展開清單 */}
+                <input
+                  type="text"
+                  placeholder="輸入姓名或電話查詢會員"
+                  value={memberQuery}
+                  onChange={(e) => { setMemberQuery(e.target.value); setSearching(true); }}
+                  onFocus={() => setSearching(true)}
+                  style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }}
+                />
+                {/* 第二層選單：只在輸入時浮出 */}
+                {searching && (
+                  <div style={{ marginTop: 6, maxHeight: 180, overflowY: "auto", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                    {q === "" && (
+                      <div style={{ padding: "10px 14px", fontSize: 13, color: "#94a3b8" }}>輸入姓名或電話開始搜尋…</div>
+                    )}
+                    {q !== "" && filtered.length === 0 && (
+                      <div style={{ padding: "10px 14px", fontSize: 14, color: "#64748b" }}>找不到「{memberQuery}」</div>
+                    )}
+                    {filtered.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => { setMemberId(m.id); setSearching(false); }}
+                        style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", textAlign: "left", padding: "12px 14px",
+                          border: "none", background: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer",
+                          borderBottom: "1px solid #f1f5f9",
+                        }}
+                      >
+                        <span>{m.name}</span>
+                        <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>{m.phone ?? ""}</span>
+                      </button>
+                    ))}
+                    {q !== "" && filtered.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setWalkIn(true); setMemberQuery(""); }}
+                        style={{ width: "100%", padding: "12px 14px", border: "none", background: "#fef9c3", color: "#854d0e", fontSize: 15, fontWeight: 700, cursor: "pointer", textAlign: "left" }}
+                      >
+                        ＋ 新增臨時客人（姓名＋電話）
+                      </button>
+                    )}
+                  </div>
+                )}
+                <button type="button" onClick={() => setWalkIn(true)}
+                  style={{ marginTop: 8, border: "none", background: "none", color: "#059669", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                  ＋ 臨時客人（不搜尋）
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <input type="text" placeholder="姓名" value={name} onChange={(e) => setName(e.target.value)}
-              style={{ width: "100%", height: 52, fontSize: 18, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
+            <input type="text" placeholder="姓名" value={name} onChange={(e) => setName(e.target.value)} autoFocus
+              style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
             <input type="tel" placeholder="電話（選填）" value={phone} onChange={(e) => setPhone(e.target.value)}
-              style={{ width: "100%", height: 52, fontSize: 18, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
-            <button type="button" onClick={() => setWalkIn(false)}
+              style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
+            <button type="button" onClick={() => { setWalkIn(false); setMemberQuery(""); }}
               style={{ border: "none", background: "none", color: "#64748b", fontSize: 14, cursor: "pointer", textAlign: "left" }}>
               ← 改選既有會員
             </button>
           </div>
         )}
 
-        {/* 收款 */}
-        <div style={{ fontSize: 15, fontWeight: 700, margin: "14px 0 8px" }}>收款</div>
-        <div style={{ display: "flex", gap: 10 }}>
+        {/* 收款：一行（標題＋兩鍵） */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}>收款</span>
           <button type="button" onClick={() => setPayNow("cash")}
-            style={{ flex: 1, minHeight: 52, borderRadius: 12, border: `2px solid ${payNow === "cash" ? "#059669" : "#cbd5e1"}`, background: payNow === "cash" ? "#ecfdf5" : "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+            style={{ flex: 1, height: 48, borderRadius: 12, border: `2px solid ${payNow === "cash" ? "#059669" : "#cbd5e1"}`, background: payNow === "cash" ? "#ecfdf5" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
             💰 已收現金
           </button>
           <button type="button" onClick={() => setPayNow("unpaid")}
-            style={{ flex: 1, minHeight: 52, borderRadius: 12, border: `2px solid ${payNow === "unpaid" ? "#d97706" : "#cbd5e1"}`, background: payNow === "unpaid" ? "#fef3c7" : "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+            style={{ flex: 1, height: 48, borderRadius: 12, border: `2px solid ${payNow === "unpaid" ? "#d97706" : "#cbd5e1"}`, background: payNow === "unpaid" ? "#fef3c7" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
             未收（保留 24h）
           </button>
-        </div>
-
-        <div style={{ display: "inline-block", background: "#fef9c3", color: "#854d0e", borderRadius: 8, padding: "6px 12px", fontSize: 13, fontWeight: 700, marginTop: 12 }}>
-          📞 電話訂位（log 會標記來源）
         </div>
 
         {state?.error && (
