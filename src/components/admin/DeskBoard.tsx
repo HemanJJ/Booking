@@ -753,33 +753,83 @@ function PhoneBookModal({
 }) {
   const [durationMinutes, setDurationMinutes] = useState(90);
   const [memberId, setMemberId] = useState("");
-  const [memberQuery, setMemberQuery] = useState("");
-  const [searching, setSearching] = useState(false); // 輸入才展開第二層選單
-  const [walkIn, setWalkIn] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [lineId, setLineId] = useState("");
   const [payNow, setPayNow] = useState("cash");
+
+  // 第二層「找客人（人工單＋）」彈窗狀態
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"search" | "manual">("search");
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerName, setPickerName] = useState("");
+  const [pickerPhone, setPickerPhone] = useState("");
+  const [pickerLineId, setPickerLineId] = useState("");
+
+  // 鍵盤（visualViewport）：手機/平板喚起鍵盤時，對話框收到鍵盤上方，不再被蓋住
+  const [vp, setVp] = useState({ top: 0, height: 0 });
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const sync = () => setVp({ top: vv.offsetTop, height: vv.height });
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+    };
+  }, []);
 
   const [state, action, pending] = useActionState(adminCreateBookingAction, {} as AdminState);
 
-  const q = memberQuery.trim().toLowerCase();
-  const filtered = members
+  const lockedMember = members.find((m) => m.id === memberId);
+  // 選到會員 或 手動客人（姓名必填），其一即可送出
+  const canSubmit = !!court && (!!memberId || name.trim().length > 0);
+
+  // 第二層模糊搜尋（會員）
+  const pq = pickerQuery.trim().toLowerCase();
+  const filteredMembers = members
     .filter(
       (m) =>
-        !q ||
-        m.name.toLowerCase().includes(q) ||
-        (m.phone ?? "").includes(q)
+        !pq ||
+        m.name.toLowerCase().includes(pq) ||
+        (m.phone ?? "").includes(pq)
     )
-    .slice(0, 5);
+    .slice(0, 6);
 
-  // 已選到會員 → 顯示鎖定狀態（不再展開清單）
-  const lockedMember = members.find((m) => m.id === memberId);
-  const canSubmit = !!court && (!walkIn ? !!memberId : name.trim().length > 0);
+  // 開啟第二層「找客人」：重設欄位
+  const openPicker = () => {
+    setPickerQuery("");
+    setPickerName("");
+    setPickerPhone("");
+    setPickerLineId("");
+    setPickerMode("search");
+    setPickerOpen(true);
+  };
+  // 選到既有會員
+  const pickMember = (m: MemberOption) => {
+    setMemberId(m.id);
+    setName("");
+    setPhone("");
+    setLineId("");
+    setPickerOpen(false);
+  };
+  // 手動新增客人
+  const pickManual = () => {
+    if (!pickerName.trim()) return;
+    setName(pickerName.trim());
+    setPhone(pickerPhone.trim());
+    setLineId(pickerLineId.trim());
+    setMemberId("");
+    setPickerOpen(false);
+  };
 
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 60, overflowY: "auto",
+        position: "fixed", top: vp.top || 0, left: 0, width: "100%",
+        height: vp.height ? `${vp.height}px` : "100vh", zIndex: 60, overflowY: "auto",
         backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
       }}
       onClick={onClose}
@@ -790,7 +840,7 @@ function PhoneBookModal({
         style={{
           width: "100%", maxWidth: 440, background: "#fff", borderRadius: 20, padding: "18px 20px",
           boxShadow: "0 20px 60px rgba(0,0,0,.35)",
-          maxHeight: "92vh", overflowY: "auto",
+          maxHeight: "88%", overflowY: "auto",
         }}
       >
         <input type="hidden" name="courtId" value={court?.id ?? ""} />
@@ -800,10 +850,10 @@ function PhoneBookModal({
         <input type="hidden" name="payNow" value={payNow} />
         <input type="hidden" name="source" value="phone" />
         <input type="hidden" name="returnTo" value="/desk" />
-        <input type="hidden" name="memberId" value={walkIn ? "" : memberId} />
-        <input type="hidden" name="name" value={walkIn ? name : ""} />
-        <input type="hidden" name="phone" value={walkIn ? phone : ""} />
-        <input type="hidden" name="note" value="📞 電話訂位" />
+        <input type="hidden" name="memberId" value={memberId} />
+        <input type="hidden" name="name" value={memberId ? "" : name} />
+        <input type="hidden" name="phone" value={memberId ? "" : phone} />
+        <input type="hidden" name="note" value={`📞 電話訂位${lineId ? ` · LINE ${lineId}` : ""}`} />
 
         {/* 標題＋場次：一行 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -831,84 +881,32 @@ function PhoneBookModal({
 
         {/* 客人 */}
         <div style={{ fontSize: 15, fontWeight: 700, margin: "12px 0 6px" }}>客人</div>
-        {!walkIn ? (
-          <div>
-            {lockedMember ? (
-              // 已選到會員 → 顯示鎖定狀態，可重選
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 52, borderRadius: 12, border: "2px solid #059669", background: "#ecfdf5", padding: "0 14px" }}>
-                <span style={{ fontSize: 17, fontWeight: 700, color: "#059669" }}>
-                  ✓ {lockedMember.name} <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>{lockedMember.phone ?? ""}</span>
+        <div>
+          {lockedMember ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 52, borderRadius: 12, border: "2px solid #059669", background: "#ecfdf5", padding: "0 14px" }}>
+              <span style={{ fontSize: 17, fontWeight: 700, color: "#059669" }}>
+                ✓ {lockedMember.name} <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>{lockedMember.phone ?? ""}</span>
+              </span>
+              <button type="button" onClick={openPicker} style={{ border: "none", background: "none", color: "#059669", fontSize: 14, cursor: "pointer" }}>重選</button>
+            </div>
+          ) : name || phone || lineId ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 52, borderRadius: 12, border: "2px solid #059669", background: "#ecfdf5", padding: "0 14px" }}>
+              <span style={{ fontSize: 17, fontWeight: 700, color: "#059669" }}>
+                ✓ {name}
+                <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>
+                  {phone ? ` ${phone}` : ""}{lineId ? ` · LINE ${lineId}` : ""}
                 </span>
-                <button type="button" onClick={() => { setMemberId(""); setSearching(false); }}
-                  style={{ border: "none", background: "none", color: "#059669", fontSize: 14, cursor: "pointer" }}>
-                  重選
-                </button>
-              </div>
-            ) : (
-              <>
-                {/* 搜尋框：預設不展開清單 */}
-                <input
-                  type="text"
-                  placeholder="輸入姓名或電話查詢會員"
-                  value={memberQuery}
-                  onChange={(e) => { setMemberQuery(e.target.value); setSearching(true); }}
-                  onFocus={() => setSearching(true)}
-                  style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }}
-                />
-                {/* 第二層選單：只在輸入時浮出 */}
-                {searching && (
-                  <div style={{ marginTop: 6, maxHeight: 180, overflowY: "auto", borderRadius: 12, border: "1px solid #e2e8f0" }}>
-                    {q === "" && (
-                      <div style={{ padding: "10px 14px", fontSize: 13, color: "#94a3b8" }}>輸入姓名或電話開始搜尋…</div>
-                    )}
-                    {q !== "" && filtered.length === 0 && (
-                      <div style={{ padding: "10px 14px", fontSize: 14, color: "#64748b" }}>找不到「{memberQuery}」</div>
-                    )}
-                    {filtered.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => { setMemberId(m.id); setSearching(false); }}
-                        style={{
-                          display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", textAlign: "left", padding: "12px 14px",
-                          border: "none", background: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer",
-                          borderBottom: "1px solid #f1f5f9",
-                        }}
-                      >
-                        <span>{m.name}</span>
-                        <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>{m.phone ?? ""}</span>
-                      </button>
-                    ))}
-                    {q !== "" && filtered.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={() => { setWalkIn(true); setMemberQuery(""); }}
-                        style={{ width: "100%", padding: "12px 14px", border: "none", background: "#fef9c3", color: "#854d0e", fontSize: 15, fontWeight: 700, cursor: "pointer", textAlign: "left" }}
-                      >
-                        ＋ 新增臨時客人（姓名＋電話）
-                      </button>
-                    )}
-                  </div>
-                )}
-                <button type="button" onClick={() => setWalkIn(true)}
-                  style={{ marginTop: 8, border: "none", background: "none", color: "#059669", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-                  ＋ 臨時客人（不搜尋）
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <input type="text" placeholder="姓名" value={name} onChange={(e) => setName(e.target.value)} autoFocus
-              style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
-            <input type="tel" placeholder="電話（選填）" value={phone} onChange={(e) => setPhone(e.target.value)}
-              style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
-            <button type="button" onClick={() => { setWalkIn(false); setMemberQuery(""); }}
-              style={{ border: "none", background: "none", color: "#64748b", fontSize: 14, cursor: "pointer", textAlign: "left" }}>
-              ← 改選既有會員
+              </span>
+              <button type="button" onClick={openPicker} style={{ border: "none", background: "none", color: "#059669", fontSize: 14, cursor: "pointer" }}>重選</button>
+            </div>
+          ) : (
+            <button type="button" onClick={openPicker}
+              style={{ width: "100%", height: 54, borderRadius: 12, border: "2px dashed #059669", background: "#f0fdf4", color: "#059669", fontSize: 17, fontWeight: 800, cursor: "pointer" }}>
+              ＋ 找客人（會員 / 電話 / LINE）
             </button>
-          </div>
-        )}
+          )}
+        </div>
+
 
         {/* 收款：一行（標題＋兩鍵） */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -940,6 +938,83 @@ function PhoneBookModal({
           </button>
         </div>
       </form>
+
+      {/* ===== 第二層：找客人（人工單＋）彈窗 ===== */}
+      {pickerOpen && (
+        <div
+          style={{
+            position: "fixed", top: vp.top || 0, left: 0, width: "100%",
+            height: vp.height ? `${vp.height}px` : "100vh", zIndex: 70,
+            backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+          }}
+          onClick={() => setPickerOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 20, padding: "18px 20px", boxShadow: "0 20px 60px rgba(0,0,0,.4)", maxHeight: "88%", overflowY: "auto" }}
+          >
+            {/* 標題＋關閉 */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <h2 style={{ fontSize: 18 }}>🔎 找客人</h2>
+              <button type="button" onClick={() => setPickerOpen(false)} style={{ border: "none", background: "none", fontSize: 20, color: "#64748b", cursor: "pointer" }}>✕</button>
+            </div>
+
+            {/* 模式切換 */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" onClick={() => setPickerMode("search")}
+                style={{ flex: 1, height: 44, borderRadius: 10, border: `2px solid ${pickerMode === "search" ? "#059669" : "#cbd5e1"}`, background: pickerMode === "search" ? "#ecfdf5" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                🔍 搜尋會員
+              </button>
+              <button type="button" onClick={() => setPickerMode("manual")}
+                style={{ flex: 1, height: 44, borderRadius: 10, border: `2px solid ${pickerMode === "manual" ? "#059669" : "#cbd5e1"}`, background: pickerMode === "manual" ? "#ecfdf5" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                ＋ 新增客人
+              </button>
+            </div>
+
+            {pickerMode === "search" ? (
+              <div style={{ marginTop: 12 }}>
+                <input type="text" placeholder="模糊搜尋姓名／電話"
+                  value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)}
+                  style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
+                <div style={{ marginTop: 6, maxHeight: 240, overflowY: "auto", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                  {pq === "" && (<div style={{ padding: "10px 14px", fontSize: 13, color: "#94a3b8" }}>輸入姓名或電話開始搜尋…</div>)}
+                  {filteredMembers.length === 0 && pq !== "" && (
+                    <div style={{ padding: "10px 14px", fontSize: 14, color: "#64748b" }}>找不到「{pickerQuery}」</div>
+                  )}
+                  {filteredMembers.map((m) => (
+                    <button key={m.id} type="button" onClick={() => pickMember(m)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", textAlign: "left", padding: "12px 14px", border: "none", background: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", borderBottom: "1px solid #f1f5f9" }}>
+                      <span>{m.name}</span>
+                      <span style={{ color: "#94a3b8", fontWeight: 400, fontSize: 13 }}>{m.phone ?? ""}</span>
+                    </button>
+                  ))}
+                  {pq !== "" && filteredMembers.length === 0 && (
+                    <button type="button" onClick={() => setPickerMode("manual")}
+                      style={{ width: "100%", padding: "12px 14px", border: "none", background: "#fef9c3", color: "#854d0e", fontSize: 15, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
+                      ＋ 找不到，改新增客人（姓名＋電話＋LINE）
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                <input type="text" placeholder="姓名（必填）" value={pickerName} onChange={(e) => setPickerName(e.target.value)} autoFocus
+                  style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
+                <input type="tel" inputMode="tel" placeholder="電話（選填）" value={pickerPhone} onChange={(e) => setPickerPhone(e.target.value)}
+                  style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
+                <input type="text" inputMode="text" placeholder="LINE ID（選填）" value={pickerLineId} onChange={(e) => setPickerLineId(e.target.value)}
+                  style={{ width: "100%", height: 48, fontSize: 17, borderRadius: 12, border: "2px solid #cbd5e1", padding: "0 14px" }} />
+                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                  <button type="button" onClick={() => setPickerOpen(false)}
+                    style={{ flex: 1, height: 54, borderRadius: 14, border: "none", background: "#e2e8f0", color: "#475569", fontSize: 17, fontWeight: 700, cursor: "pointer" }}>取消</button>
+                  <button type="button" onClick={pickManual} disabled={!pickerName.trim()}
+                    style={{ flex: 1, height: 54, borderRadius: 14, border: "none", background: "#059669", color: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", opacity: pickerName.trim() ? 1 : 0.5 }}>✅ 選定</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
