@@ -8,6 +8,7 @@ import {
   unlockMemberAction,
   banMemberAction,
 } from "@/app/admin/actions";
+import AddMemberForm from "@/components/admin/AddMemberForm";
 
 export const metadata: Metadata = {
   title: "會員管理",
@@ -23,6 +24,8 @@ export default async function AdminMembersPage() {
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">會員管理</h1>
+
+      <AddMemberForm />
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-sm">

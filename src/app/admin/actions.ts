@@ -199,6 +199,35 @@ export async function toggleStaffAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/members");
 }
 
+// ===== 會員：新增（後台人工登打） =====
+export async function createMemberAction(
+  _prev: AdminState,
+  formData: FormData
+): Promise<AdminState> {
+  await requireOwner();
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim() || null;
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+
+  if (!name) return { error: "請填寫會員姓名" };
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return { error: "Email 格式錯誤" };
+  if (email) {
+    const dup = await prisma.member.findUnique({ where: { email } });
+    if (dup) return { error: `該 Email 已是會員：${dup.name}` };
+  }
+  if (phone) {
+    const dup = await prisma.member.findFirst({ where: { phone } });
+    if (dup) return { error: `該手機已是會員：${dup.name}` };
+  }
+
+  await prisma.member.create({
+    data: { name, email, phone, role: "member" },
+  });
+  revalidatePath("/admin/members");
+  return {};
+}
+
 // ===== 價位規則（尖峰/離峰週規則 + 特定日期） =====
 export async function savePriceRuleAction(
   _prev: AdminState,
