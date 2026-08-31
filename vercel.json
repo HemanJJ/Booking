@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
   "crons": [
-    { "path": "/api/cron/release", "schedule": "0 * * * *" }
+    { "path": "/api/cron/release", "schedule": "0 0 * * *" }
   ]
 }
