@@ -121,7 +121,7 @@ export default function WeekSchedule({
         <div className="min-w-[920px]">
           {/* 表頭：日期 */}
           <div
-            className="grid border-b border-slate-300 bg-slate-50"
+            className="grid border-b-2 border-slate-400 bg-slate-50"
             style={{ gridTemplateColumns: gridCols }}
           >
             <div className="px-3 py-2 text-xs font-semibold text-slate-400">
@@ -131,7 +131,7 @@ export default function WeekSchedule({
               <div
                 key={dayStrs[i]}
                 className={cn(
-                  "border-l border-slate-200 px-2 py-2 text-center",
+                  "border-l border-slate-300 px-2 py-2 text-center",
                   dayStrs[i] === todayStr && "bg-emerald-50"
                 )}
               >
@@ -156,7 +156,7 @@ export default function WeekSchedule({
           {courts.map((court) => (
             <div
               key={court.id}
-              className="grid border-b border-slate-300 last:border-b-0"
+              className="grid border-b border-slate-400 last:border-b-0"
               style={{ gridTemplateColumns: gridCols }}
             >
               <div className="sticky left-0 flex items-center bg-white px-3 py-2">
@@ -181,7 +181,7 @@ export default function WeekSchedule({
                   <div
                     key={ds}
                     className={cn(
-                      "min-h-[64px] space-y-1 border-l border-slate-200 p-1",
+                      "min-h-[64px] space-y-1 border-l border-slate-300 p-1",
                       ds === todayStr && "bg-emerald-50/50"
                     )}
                   >
