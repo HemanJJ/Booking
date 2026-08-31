@@ -754,7 +754,7 @@ export async function saveRecurringBookingAction(
     return { error: "終止日期格式錯誤（YYYY-MM-DD）" };
   }
 
-  await prisma.recurringBooking.create({
+  const rule = await prisma.recurringBooking.create({
     data: {
       courtId,
       memberId,
@@ -766,9 +766,17 @@ export async function saveRecurringBookingAction(
       note: note || null,
     },
   });
-  await generateRecurringBookings();
+  const { conflicts } = await generateRecurringBookings();
   revalidatePath("/admin/recurring");
   revalidatePath("/admin");
+  const mine = conflicts.filter((c) => c.ruleId === rule.id);
+  if (mine.length > 0) {
+    const c = mine[0];
+    const day = ["日", "一", "二", "三", "四", "五", "六"][c.dayOfWeek];
+    return {
+      error: `⚠️ 固定位已建立，但撞到衝突：${c.memberName}｜${c.courtName} 週${day} ${c.startTime}-${c.endTime} 該時段已被其他訂位佔用，這筆沒生成。之後時段空出來會自動生成（也請確認那筆佔用訂位）。`,
+    };
+  }
   redirect("/admin/recurring");
 }
 

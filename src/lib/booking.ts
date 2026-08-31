@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { localDateString, nextDates, TAIWAN_OFFSET_MS } from "./utils";
 import { getActiveRules, resolveSlotPrice, computeBookingTotal } from "./pricing";
 import { logBookingEvent } from "./audit";
+import { sendLineAdminNotify } from "./notify";
 
 /** 預約最小單位（分鐘） */
 export const SLOT_MINUTES = 30;
@@ -427,18 +428,44 @@ export async function releaseExpiredBookings(): Promise<number> {
   return expired.length;
 }
 
+/** 固定位衝突通知去重間隔（同規則 1 小時內不重複吵） */
+const CONFLICT_NOTIFY_COOLDOWN_MS = 60 * 60 * 1000;
+
+const DOW_NAMES = ["日", "一", "二", "三", "四", "五", "六"] as const;
+
 /**
  * 生成「未來 4 週」的固定訂位（每週固定團）。
  * 每個活躍的 RecurringBooking，往後 28 天中符合「星期幾＋起訖」的日子，
  * 若尚未生成且時段未被佔，就建一筆「已確認・未收款」的 Booking。
- * 被佔的週次跳過並通知店家。回傳本次新生成的筆數。
+ * 被佔的週次：不再靜默——回報 conflicts 給呼叫端，並（去重）LINE 通知老闆。
+ * 回傳本次新生成筆數與衝突清單。
  */
-export async function generateRecurringBookings(): Promise<number> {
+export async function generateRecurringBookings(): Promise<{
+  created: number;
+  conflicts: {
+    ruleId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    dayOfWeek: number;
+    memberName: string;
+    courtName: string;
+  }[];
+}> {
   const rules = await prisma.recurringBooking.findMany({
     where: { status: "active" },
-    include: { court: true },
+    include: { court: true, member: true },
   });
   let created = 0;
+  const conflicts: {
+    ruleId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    dayOfWeek: number;
+    memberName: string;
+    courtName: string;
+  }[] = [];
 
   const [todayY, todayM, todayD] = localDateString().split("-").map(Number);
   for (const rule of rules) {
@@ -473,15 +500,49 @@ export async function generateRecurringBookings(): Promise<number> {
           note: rule.note ?? "固定訂位",
         });
         created++;
-      } catch {
-        // 時段被佔（客人先訂了）→ 靜默跳過，不通知
+      } catch (e) {
+        // 時段被佔（其他訂位先佔了）→ 不再靜默：回報 + LINE 通知(去重)
+        if (isUniqueViolation(e)) {
+          conflicts.push({
+            ruleId: rule.id,
+            date,
+            startTime: rule.startTime,
+            endTime: toHHMM(toMinutes(rule.startTime) + rule.durationMinutes),
+            dayOfWeek: rule.dayOfWeek,
+            memberName: rule.member?.name ?? "會員",
+            courtName: rule.court.name,
+          });
+          await notifyRecurringConflict(rule);
+        }
       }
     }
   }
 
-  // 固定訂位被佔 = 正常（客人先訂了），靜默跳過，不通知。
-  // lock（DB 唯一鍵）已保證不重複訂位，無需人工處理。
-  return created;
+  return { created, conflicts };
+}
+
+/** 固定位被佔：LINE 通知老闆（依 skipNotifiedAt 去重，避免每小時重複吵） */
+async function notifyRecurringConflict(rule: {
+  id: string;
+  dayOfWeek: number;
+  startTime: string;
+  durationMinutes: number;
+  member?: { name: string } | null;
+  court: { name: string };
+  skipNotifiedAt?: Date | null;
+}): Promise<void> {
+  const last = rule.skipNotifiedAt?.getTime() ?? 0;
+  if (Date.now() - last < CONFLICT_NOTIFY_COOLDOWN_MS) return; // 去重
+  const day = DOW_NAMES[rule.dayOfWeek];
+  const end = toHHMM(toMinutes(rule.startTime) + rule.durationMinutes);
+  await sendLineAdminNotify(
+    `⚠️ 固定位生成撞到衝突：${rule.member?.name ?? "會員"}｜${rule.court.name} 週${day} ${rule.startTime}-${end}｜該時段已被其他訂位佔用，本次未生成。請到「固定訂位」確認。`,
+    "instant"
+  );
+  await prisma.recurringBooking.update({
+    where: { id: rule.id },
+    data: { skipNotifiedAt: new Date() },
+  });
 }
 
 function isUniqueViolation(e: unknown): boolean {
