@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "儀表板",
 };
 
+// build 時不要靜態預渲染（頁面會查資料庫＋生成固定位）——只在請求時伺服器渲染
+export const dynamic = "force-dynamic";
+
 const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
   confirmed: { text: "已確認", cls: "bg-emerald-100 text-emerald-700" },
   pending: { text: "保留中", cls: "bg-amber-100 text-amber-700" },
