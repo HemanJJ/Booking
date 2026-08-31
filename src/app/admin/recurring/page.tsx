@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { stopRecurringBookingAction } from "@/app/admin/actions";
-import { formatDate, weekdayOf, formatDuration } from "@/lib/utils";
+import { formatDate, formatDuration } from "@/lib/utils";
 import RecurringForm from "@/components/admin/RecurringForm";
 
 export const metadata: Metadata = {
@@ -10,7 +11,13 @@ export const metadata: Metadata = {
 
 const DOW_TEXT = ["日", "一", "二", "三", "四", "五", "六"];
 
-export default async function AdminRecurringPage() {
+export default async function AdminRecurringPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
+  const { edit } = await searchParams;
+
   const [courts, members, rules] = await Promise.all([
     prisma.court.findMany({
       where: { status: "active", venue: { status: "active" } },
@@ -27,26 +34,64 @@ export default async function AdminRecurringPage() {
     }),
   ]);
 
+  const editing = edit ? rules.find((r) => r.id === edit) ?? null : null;
+
   return (
     <div>
       <h1 className="mb-2 text-2xl font-bold">固定訂位（每週固定團）</h1>
       <p className="mb-6 text-sm text-slate-500">
         設一次，系統每天自動生成未來 4 週的訂位；某週被佔會自動跳過並通知你。
+        ＊新增時「星期」請務必選（不再預設週一）。
       </p>
 
       <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold">＋ 新增固定訂位</h2>
-        <RecurringForm
-          courts={courts.map((c) => ({
-            id: c.id,
-            name: c.name,
-            venueName: c.venue.name,
-          }))}
-          members={members}
-        />
+        {editing ? (
+          <RecurringForm
+            key={editing.id}
+            courts={courts.map((c) => ({
+              id: c.id,
+              name: c.name,
+              venueName: c.venue.name,
+            }))}
+            members={members}
+            recurring={{
+              id: editing.id,
+              memberId: editing.memberId,
+              courtId: editing.courtId,
+              dayOfWeek: editing.dayOfWeek,
+              startTime: editing.startTime,
+              durationMinutes: editing.durationMinutes,
+              startDate: editing.startDate,
+              endDate: editing.endDate,
+              note: editing.note,
+            }}
+          />
+        ) : (
+          <>
+            <h2 className="mb-4 text-lg font-semibold">＋ 新增固定訂位</h2>
+            <RecurringForm
+              courts={courts.map((c) => ({
+                id: c.id,
+                name: c.name,
+                venueName: c.venue.name,
+              }))}
+              members={members}
+            />
+          </>
+        )}
       </div>
 
-      <h2 className="mb-3 text-lg font-semibold">現有固定訂位</h2>
+      <h2 className="mb-3 text-lg font-semibold">
+        現有固定訂位
+        {editing && (
+          <Link
+            href="/admin/recurring"
+            className="ml-3 rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            ← 取消編輯
+          </Link>
+        )}
+      </h2>
       {rules.length === 0 ? (
         <p className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
           尚無固定訂位。
@@ -67,7 +112,14 @@ export default async function AdminRecurringPage() {
             </thead>
             <tbody>
               {rules.map((r) => (
-                <tr key={r.id} className="border-t border-slate-100">
+                <tr
+                  key={r.id}
+                  className={
+                    r.id === editing?.id
+                      ? "border-t border-emerald-300 bg-emerald-50/40"
+                      : "border-t border-slate-100"
+                  }
+                >
                   <td className="px-4 py-3 font-medium">{r.member.name}</td>
                   <td className="px-4 py-3">
                     {r.court.venue.name} · {r.court.name}
@@ -92,17 +144,25 @@ export default async function AdminRecurringPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {r.status === "active" && (
-                      <form action={stopRecurringBookingAction}>
-                        <input type="hidden" name="id" value={r.id} />
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                        >
-                          停止系列
-                        </button>
-                      </form>
-                    )}
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/recurring?edit=${r.id}`}
+                        className="rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                      >
+                        編輯
+                      </Link>
+                      {r.status === "active" && (
+                        <form action={stopRecurringBookingAction}>
+                          <input type="hidden" name="id" value={r.id} />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                          >
+                            停止系列
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

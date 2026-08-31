@@ -780,6 +780,77 @@ export async function saveRecurringBookingAction(
   redirect("/admin/recurring");
 }
 
+export async function updateRecurringBookingAction(
+  _prev: AdminState,
+  formData: FormData
+): Promise<AdminState> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "").trim();
+  const courtId = String(formData.get("courtId") ?? "").trim();
+  const memberId = String(formData.get("memberId") ?? "").trim();
+  const dayOfWeek = Number(formData.get("dayOfWeek") ?? -1);
+  const startTime = String(formData.get("startTime") ?? "").trim();
+  const durationMinutes = Number(formData.get("durationMinutes") ?? 0);
+  const startDate = String(formData.get("startDate") ?? "").trim();
+  const endDateRaw = String(formData.get("endDate") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!id) return { error: "缺少固定位 id" };
+  if (!courtId) return { error: "請選擇場地" };
+  if (!memberId) return { error: "請選擇會員" };
+  if (dayOfWeek < 0 || dayOfWeek > 6) return { error: "請選擇星期" };
+  if (!TIME_RE.test(startTime)) return { error: "開始時間格式應為 HH:MM" };
+  if (durationMinutes < 30 || durationMinutes > 240 || durationMinutes % 30 !== 0) {
+    return { error: "時長須為 30 的倍數（30~240 分）" };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return { error: "起始日期格式錯誤（YYYY-MM-DD）" };
+  }
+  if (endDateRaw && !/^\d{4}-\d{2}-\d{2}$/.test(endDateRaw)) {
+    return { error: "終止日期格式錯誤（YYYY-MM-DD）" };
+  }
+
+  const rule = await prisma.recurringBooking.update({
+    where: { id },
+    data: {
+      courtId,
+      memberId,
+      dayOfWeek,
+      startTime,
+      durationMinutes,
+      startDate,
+      endDate: endDateRaw || null,
+      note: note || null,
+    },
+  });
+
+  // 清除此固定位舊生成訂位（含時段），再重新生成，避免舊星期/時段殘留
+  await prisma.$transaction(async (tx) => {
+    const olds = await tx.booking.findMany({
+      where: { recurringId: rule.id },
+      select: { id: true },
+    });
+    const ids = olds.map((b) => b.id);
+    if (ids.length) {
+      await tx.bookingSlot.deleteMany({ where: { bookingId: { in: ids } } });
+      await tx.booking.deleteMany({ where: { id: { in: ids } } });
+    }
+  });
+
+  const { conflicts } = await generateRecurringBookings();
+  revalidatePath("/admin/recurring");
+  revalidatePath("/admin");
+  const mine = conflicts.filter((c) => c.ruleId === rule.id);
+  if (mine.length > 0) {
+    const c = mine[0];
+    const day = ["日", "一", "二", "三", "四", "五", "六"][c.dayOfWeek];
+    return {
+      error: `⚠️ 已更新，但撞到衝突：${c.memberName}｜${c.courtName} 週${day} ${c.startTime}-${c.endTime} 該時段已被佔，這幾週沒生成（空出來會自動補）。`,
+    };
+  }
+  redirect("/admin/recurring");
+}
+
 export async function stopRecurringBookingAction(
   formData: FormData
 ): Promise<void> {
