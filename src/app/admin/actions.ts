@@ -863,6 +863,21 @@ export async function stopRecurringBookingAction(
   revalidatePath("/admin/recurring");
 }
 
+export async function resumeRecurringBookingAction(
+  formData: FormData
+): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  await prisma.recurringBooking.update({
+    where: { id },
+    data: { status: "active" },
+  });
+  await generateRecurringBookings();
+  revalidatePath("/admin/recurring");
+  revalidatePath("/admin");
+  redirect("/admin/recurring");
+}
+
 // ===== 批次匯入（人工接單補登，災難復原用） =====
 export type ImportState = {
   error?: string;

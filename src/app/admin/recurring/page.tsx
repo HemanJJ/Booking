@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { stopRecurringBookingAction } from "@/app/admin/actions";
+import { stopRecurringBookingAction, resumeRecurringBookingAction } from "@/app/admin/actions";
 import { formatDate, formatDuration } from "@/lib/utils";
 import RecurringForm from "@/components/admin/RecurringForm";
 
@@ -151,6 +151,22 @@ export default async function AdminRecurringPage({
                       >
                         編輯
                       </Link>
+                      {r.status === "stopped" && (
+                        <form
+                          action={resumeRecurringBookingAction}
+                          onSubmit={() =>
+                            confirm("確定恢復這個固定訂位？（停掉的系列會重新開始生成）")
+                          }
+                        >
+                          <input type="hidden" name="id" value={r.id} />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                          >
+                            恢復
+                          </button>
+                        </form>
+                      )}
                       {r.status === "active" && (
                         <form action={stopRecurringBookingAction}>
                           <input type="hidden" name="id" value={r.id} />
