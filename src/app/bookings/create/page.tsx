@@ -24,32 +24,36 @@ export default async function BookingCreatePage({
     redirect(`/account/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
-  // 所有啟用中的場地（供頁面下拉切換）
-  const courts = await prisma.court.findMany({
-    where: { status: "active", venue: { status: "active" } },
-    orderBy: { name: "asc" },
-    include: { venue: true },
+  // 所有啟用中的分店（含場地）
+  const venuesWithCourts = await prisma.venue.findMany({
+    where: { status: "active", courts: { some: { status: "active" } } },
+    orderBy: { createdAt: "asc" },
+    include: { courts: { where: { status: "active" }, orderBy: { name: "asc" } } },
   });
 
-  if (courts.length === 0) redirect("/courts");
+  if (venuesWithCourts.length === 0) redirect("/courts");
 
-  // 預設選場地：URL courtId 帶入，否則第一個
-  const court =
-    (courtId && courts.find((c) => c.id === courtId)) || courts[0];
+  // 所有場地（跨分店，供表單切換）
+  const allCourts = venuesWithCourts.flatMap((v) =>
+    v.courts.map((c) => ({
+      id: c.id,
+      name: c.name,
+      venueId: v.id,
+      venueName: v.name,
+      pricePerHour: c.pricePerHour,
+      openingTime: v.openingTime,
+      closingTime: v.closingTime,
+    }))
+  );
 
-  const courtData = courts.map((c) => ({
-    id: c.id,
-    name: c.name,
-    venueName: c.venue.name,
-    pricePerHour: c.pricePerHour,
-    openingTime: c.venue.openingTime,
-    closingTime: c.venue.closingTime,
-  }));
+  // 預設選場地：URL courtId 帶入，否則第一個場地
+  const initialCourt =
+    (courtId && allCourts.find((c) => c.id === courtId)) || allCourts[0];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <nav className="mb-6 text-sm text-slate-500">
-        <Link href={`/courts/${court.id}`} className="hover:text-emerald-700">
+        <Link href={`/courts/${initialCourt.id}`} className="hover:text-emerald-700">
           ← 返回場地詳情
         </Link>
       </nav>
@@ -57,14 +61,24 @@ export default async function BookingCreatePage({
       <div className="mb-8">
         <h1 className="text-3xl font-bold">建立訂位</h1>
         <p className="mt-2 text-slate-600">
-          {court.venue.name} · 選擇場地與時段
+          選擇分店與場地，快速訂位
         </p>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <BookingForm
-          courts={courtData}
-          initialCourtId={court.id}
+          venues={venuesWithCourts.map((v) => ({
+            id: v.id,
+            name: v.name,
+            courts: v.courts.map((c) => ({
+              id: c.id,
+              name: c.name,
+              pricePerHour: c.pricePerHour,
+              openingTime: v.openingTime,
+              closingTime: v.closingTime,
+            })),
+          }))}
+          initialCourtId={initialCourt.id}
         />
       </div>
     </div>
