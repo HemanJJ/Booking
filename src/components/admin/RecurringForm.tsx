@@ -7,6 +7,7 @@ import {
   type AdminState,
 } from "@/app/admin/actions";
 import { localDateString } from "@/lib/utils";
+import Spinner from "@/components/Spinner";
 
 export type RecCourtOption = { id: string; name: string; venueName: string };
 export type RecMemberOption = { id: string; name: string; phone: string | null };
@@ -194,10 +195,11 @@ export default function RecurringForm({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:bg-slate-300"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
+            {pending && <Spinner />}
             {pending
-              ? "儲存中…"
+              ? "儲存中…（勿重複點擊）"
               : edit
                 ? "儲存修改"
                 : "＋ 建立固定訂位"}

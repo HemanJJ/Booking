@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useActionState } from "react";
 import { createMemberAction, type AdminState } from "@/app/admin/actions";
+import Spinner from "@/components/Spinner";
 
 export default function AddMemberForm() {
   const [open, setOpen] = useState(false);
@@ -66,9 +67,10 @@ export default function AddMemberForm() {
             <button
               type="submit"
               disabled={pending}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? "存檔中…" : "建立會員"}
+              {pending && <Spinner />}
+              {pending ? "存檔中…（勿重複點擊）" : "建立會員"}
             </button>
             <button
               type="button"
