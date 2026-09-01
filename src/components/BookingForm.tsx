@@ -76,6 +76,9 @@ export default function BookingForm({
   const [slots, setSlots] = useState<Slot[]>([]);
   const [discounts, setDiscounts] = useState<DurationDiscountLike[]>([]);
   const [loadedDate, setLoadedDate] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  // 月曆顯示的月份（yyyy-mm）
+  const [calMonth, setCalMonth] = useState(() => date.slice(0, 7));
 
   const [state, action, pending] = useActionState(createBookingAction, {});
 
@@ -142,7 +145,41 @@ export default function BookingForm({
   function selectDate(d: string) {
     setDate(d);
     setStartTime(null);
+    setCalendarOpen(false);
   }
+
+  // 月曆工具：切換月份
+  function shiftMonth(delta: number) {
+    const [y, m] = calMonth.split("-").map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setCalMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+
+  // 產生某月的日期格（weekday 對齊）
+  function calendarDays(): { day: number; date: string; isPast: boolean }[] {
+    const [y, m] = calMonth.split("-").map(Number);
+    const first = new Date(y, m - 1, 1);
+    const startWeekday = first.getDay(); // 0=日
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const cells: { day: number; date: string; isPast: boolean }[] = [];
+    // 填入月初前的空白（padding）
+    for (let i = 0; i < startWeekday; i++) cells.push({ day: 0, date: "", isPast: true });
+    for (let day = 1; day <= daysInMonth; day++) {
+      const ds = `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const isPast = ds < localToday();
+      cells.push({ day, date: ds, isPast });
+    }
+    return cells;
+  }
+
+  function localToday(): string {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  }
+
+  const calCells = calendarDays();
+  const calTitle = `${Number(calMonth.slice(0, 4))} 年 ${Number(calMonth.slice(5, 7))} 月`;
+  const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
 
   const slotCount = durationMinutes / SLOT_MINUTES;
   const startIdx = slots.findIndex((s) => s.startTime === startTime);
@@ -220,27 +257,76 @@ export default function BookingForm({
         </div>
       </div>
 
-      {/* 日期 */}
-      <div>
+      {/* 日期（點下拉 → 展開月曆） */}
+      <div className="relative">
         <label className="mb-2 block text-sm font-semibold">1. 選擇日期</label>
-        <div className="flex flex-wrap gap-2">
-          {dates.map((d) => (
+        <button
+          type="button"
+          onClick={() => { setCalendarOpen(!calendarOpen); setCalMonth(date.slice(0, 7)); }}
+          className="flex w-full items-center justify-between rounded-xl border-2 border-emerald-200 bg-white px-4 py-3 text-base font-semibold text-emerald-800 hover:border-emerald-400"
+        >
+          <span>
+            {weekdayOf(date)} {shortDate(date)}
+          </span>
+          <span className="text-slate-400">▾</span>
+        </button>
+
+        {/* 快選：今天/明天/後天 短橫排 */}
+        <div className="mt-2 flex gap-2">
+          {dates.slice(0, 3).map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => selectDate(d)}
               className={cn(
-                "rounded-lg border px-3 py-2 text-sm",
-                date === d
-                  ? "border-emerald-600 bg-emerald-600 text-white"
-                  : "border-slate-300 text-slate-700 hover:bg-slate-100"
+                "rounded-lg border px-3 py-1.5 text-sm",
+                date === d ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 text-slate-700 hover:bg-slate-100"
               )}
             >
-              <span className="block font-medium">{shortDate(d)}</span>
-              <span className="block text-xs opacity-80">{weekdayOf(d)}</span>
+              {weekdayOf(d)} {shortDate(d)}
             </button>
           ))}
         </div>
+
+        {/* 月曆彈層 */}
+        {calendarOpen && (
+          <div className="absolute left-0 right-0 z-30 mt-2 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
+            {/* 月標題 + 切換 */}
+            <div className="mb-2 flex items-center justify-between">
+              <button type="button" onClick={() => shiftMonth(-1)} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">◀</button>
+              <span className="font-semibold text-slate-700">{calTitle}</span>
+              <button type="button" onClick={() => shiftMonth(1)} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">▶</button>
+            </div>
+            {/* 星期表頭 */}
+            <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-400">
+              {WEEK.map((w) => <span key={w}>{w}</span>)}
+            </div>
+            {/* 日期格 */}
+            <div className="mt-1 grid grid-cols-7 gap-1">
+              {calCells.map((c, i) => (
+                <span key={i}>
+                  {c.day ? (
+                    <button
+                      type="button"
+                      disabled={c.isPast}
+                      onClick={() => selectDate(c.date)}
+                      className={cn(
+                        "h-9 w-full rounded-lg text-sm",
+                        c.isPast && "text-slate-300",
+                        !c.isPast && date === c.date && "bg-emerald-600 text-white",
+                        !c.isPast && date !== c.date && "text-slate-700 hover:bg-emerald-50"
+                      )}
+                    >
+                      {c.day}
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 時段（中和配色：可訂亮綠、不可訂粉紅、價格上格） */}
