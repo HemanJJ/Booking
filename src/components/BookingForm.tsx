@@ -27,7 +27,16 @@ function shortDate(d: string): string {
   return d.slice(5).replace("-", "/");
 }
 
-export default function BookingForm({ court }: { court: BookingCourt }) {
+export default function BookingForm({
+  courts,
+  initialCourtId,
+}: {
+  courts: BookingCourt[];
+  initialCourtId: string;
+}) {
+  const [court, setCourt] = useState<BookingCourt>(
+    () => courts.find((c) => c.id === initialCourtId) ?? courts[0]
+  );
   const dates = useMemo(() => nextDates(14), []);
   const [date, setDate] = useState(dates[0]);
   const [startTime, setStartTime] = useState<string | null>(null);
@@ -89,6 +98,30 @@ export default function BookingForm({ court }: { court: BookingCourt }) {
       <input type="hidden" name="startTime" value={startTime ?? ""} />
       <input type="hidden" name="durationMinutes" value={durationMinutes} />
 
+      {/* 0. 選擇場地（下拉切換，8 面場不用滑） */}
+      <div>
+        <label className="mb-2 block text-sm font-semibold">選擇場地</label>
+        <select
+          value={court.id}
+          onChange={(e) => {
+            const next = courts.find((c) => c.id === e.target.value);
+            if (next) {
+              setCourt(next);
+              setStartTime(null);
+              setSlots([]);
+              setLoadedDate(null);
+            }
+          }}
+          className="w-full rounded-xl border-2 border-emerald-200 bg-white px-4 py-3 text-base font-semibold text-emerald-800 focus:border-emerald-500 focus:outline-none"
+        >
+          {courts.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.venueName} · {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* 日期 */}
       <div>
         <label className="mb-2 block text-sm font-semibold">1. 選擇日期</label>
@@ -112,7 +145,7 @@ export default function BookingForm({ court }: { court: BookingCourt }) {
         </div>
       </div>
 
-      {/* 時段 */}
+      {/* 時段（中和配色：可訂亮綠、不可訂粉紅、價格上格） */}
       <div>
         <label className="mb-2 block text-sm font-semibold">
           2. 選擇開始時段
@@ -130,18 +163,30 @@ export default function BookingForm({ court }: { court: BookingCourt }) {
                 disabled={!s.available}
                 onClick={() => setStartTime(s.startTime)}
                 className={cn(
-                  "rounded-lg border px-2 py-2 text-sm",
+                  "rounded-xl border px-2 py-2 text-sm transition-colors",
                   !s.available &&
-                    "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 line-through",
+                    "cursor-not-allowed border-rose-200 bg-rose-100 text-slate-400",
                   s.available &&
                     startTime === s.startTime &&
                     "border-emerald-600 bg-emerald-600 text-white",
                   s.available &&
                     startTime !== s.startTime &&
-                    "border-slate-300 text-slate-700 hover:bg-slate-100"
+                    "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
                 )}
               >
-                {s.startTime}
+                <span className="block font-bold">{s.startTime}</span>
+                <span
+                  className={cn(
+                    "block text-xs",
+                    !s.available
+                      ? "text-slate-400 line-through"
+                      : startTime === s.startTime
+                      ? "text-emerald-100"
+                      : "text-emerald-600"
+                  )}
+                >
+                  {s.available ? formatPrice(s.hourlyPrice) : "滿場"}
+                </span>
               </button>
             ))}
           </div>
@@ -170,8 +215,11 @@ export default function BookingForm({ court }: { court: BookingCourt }) {
       </div>
 
       {/* 試算 */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
-        <p className="text-slate-600">
+      <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm">
+        <p className="font-semibold text-emerald-800">
+          {court.venueName} · {court.name}
+        </p>
+        <p className="mt-1 text-slate-600">
           金額試算（{formatDuration(durationMinutes)}
           {priceMin !== priceMax
             ? `，時段價 ${formatPrice(priceMin)}~${formatPrice(priceMax)}/小時`

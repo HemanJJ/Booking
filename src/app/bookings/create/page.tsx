@@ -24,16 +24,27 @@ export default async function BookingCreatePage({
     redirect(`/account/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
-  const court = courtId
-    ? await prisma.court.findUnique({
-        where: { id: courtId },
-        include: { venue: true },
-      })
-    : null;
+  // 所有啟用中的場地（供頁面下拉切換）
+  const courts = await prisma.court.findMany({
+    where: { status: "active", venue: { status: "active" } },
+    orderBy: { name: "asc" },
+    include: { venue: true },
+  });
 
-  if (!court || court.status !== "active") {
-    redirect("/courts");
-  }
+  if (courts.length === 0) redirect("/courts");
+
+  // 預設選場地：URL courtId 帶入，否則第一個
+  const court =
+    (courtId && courts.find((c) => c.id === courtId)) || courts[0];
+
+  const courtData = courts.map((c) => ({
+    id: c.id,
+    name: c.name,
+    venueName: c.venue.name,
+    pricePerHour: c.pricePerHour,
+    openingTime: c.venue.openingTime,
+    closingTime: c.venue.closingTime,
+  }));
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -46,20 +57,14 @@ export default async function BookingCreatePage({
       <div className="mb-8">
         <h1 className="text-3xl font-bold">建立訂位</h1>
         <p className="mt-2 text-slate-600">
-          {court.venue.name} · {court.name}
+          {court.venue.name} · 選擇場地與時段
         </p>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <BookingForm
-          court={{
-            id: court.id,
-            name: court.name,
-            venueName: court.venue.name,
-            pricePerHour: court.pricePerHour,
-            openingTime: court.venue.openingTime,
-            closingTime: court.venue.closingTime,
-          }}
+          courts={courtData}
+          initialCourtId={court.id}
         />
       </div>
     </div>
