@@ -28,15 +28,47 @@ function shortDate(d: string): string {
 }
 
 export default function BookingForm({
-  courts,
+  venues,
   initialCourtId,
 }: {
-  courts: BookingCourt[];
+  venues: {
+    id: string;
+    name: string;
+    courts: {
+      id: string;
+      name: string;
+      pricePerHour: number;
+      openingTime: string;
+      closingTime: string;
+    }[];
+  }[];
   initialCourtId: string;
 }) {
-  const [court, setCourt] = useState<BookingCourt>(
-    () => courts.find((c) => c.id === initialCourtId) ?? courts[0]
-  );
+  // 場地小 icon 色（依場地索引循環）
+  const COURT_COLORS = [
+    "#3b82f6", "#22c55e", "#f59e0b", "#eab308", "#a855f7", "#ef4444", "#10b981", "#f97316", "#06b6d4", "#ec4899",
+  ];
+
+  // 找到初始場地所屬分店
+  const [venueId, setVenueId] = useState<string>(() => {
+    const init = venues.flatMap((v) => v.courts).find((c) => c.id === initialCourtId);
+    return init ? venues.find((v) => v.courts.some((c) => c.id === initialCourtId))!.id : venues[0].id;
+  });
+  const currentVenue = venues.find((v) => v.id === venueId) ?? venues[0];
+
+  // 從當前分店 + 初始場地建立 court
+  const [court, setCourt] = useState(() => {
+    const init = currentVenue.courts.find((c) => c.id === initialCourtId) ?? currentVenue.courts[0];
+    return {
+      id: init.id,
+      name: init.name,
+      venueName: currentVenue.name,
+      pricePerHour: init.pricePerHour,
+      openingTime: init.openingTime,
+      closingTime: init.closingTime,
+    };
+  });
+
   const dates = useMemo(() => nextDates(14), []);
   const [date, setDate] = useState(dates[0]);
   const [startTime, setStartTime] = useState<string | null>(null);
@@ -46,6 +78,42 @@ export default function BookingForm({
   const [loadedDate, setLoadedDate] = useState<string | null>(null);
 
   const [state, action, pending] = useActionState(createBookingAction, {});
+
+  // 選分店 → 切到該店第一個場地
+  function selectVenue(vid: string) {
+    const v = venues.find((x) => x.id === vid);
+    if (!v) return;
+    setVenueId(vid);
+    const first = v.courts[0];
+    setCourt({
+      id: first.id,
+      name: first.name,
+      venueName: v.name,
+      pricePerHour: first.pricePerHour,
+      openingTime: first.openingTime,
+      closingTime: first.closingTime,
+    });
+    setStartTime(null);
+    setSlots([]);
+    setLoadedDate(null);
+  }
+
+  // 選特定場地
+  function selectCourt(cid: string) {
+    const c = currentVenue.courts.find((x) => x.id === cid);
+    if (!c) return;
+    setCourt({
+      id: c.id,
+      name: c.name,
+      venueName: currentVenue.name,
+      pricePerHour: c.pricePerHour,
+      openingTime: c.openingTime,
+      closingTime: c.closingTime,
+    });
+    setStartTime(null);
+    setSlots([]);
+    setLoadedDate(null);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -98,28 +166,58 @@ export default function BookingForm({
       <input type="hidden" name="startTime" value={startTime ?? ""} />
       <input type="hidden" name="durationMinutes" value={durationMinutes} />
 
-      {/* 0. 選擇場地（下拉切換，8 面場不用滑） */}
+      {/* 0a. 選擇分店（下拉） */}
       <div>
-        <label className="mb-2 block text-sm font-semibold">選擇場地</label>
+        <label className="mb-2 block text-sm font-semibold">選擇分店</label>
         <select
-          value={court.id}
-          onChange={(e) => {
-            const next = courts.find((c) => c.id === e.target.value);
-            if (next) {
-              setCourt(next);
-              setStartTime(null);
-              setSlots([]);
-              setLoadedDate(null);
-            }
-          }}
+          value={venueId}
+          onChange={(e) => selectVenue(e.target.value)}
           className="w-full rounded-xl border-2 border-emerald-200 bg-white px-4 py-3 text-base font-semibold text-emerald-800 focus:border-emerald-500 focus:outline-none"
         >
-          {courts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.venueName} · {c.name}
+          {venues.map((v) => (
+            <option key={v.id} value={v.id}>
+              🏟️ {v.name}
             </option>
           ))}
         </select>
+      </div>
+
+      {/* 0b. 該分店的場地（彩色小 icon，點選帶資料） */}
+      <div>
+        <label className="mb-2 block text-sm font-semibold">選擇場地</label>
+        <div className="flex flex-wrap gap-2">
+          {currentVenue.courts.map((c, i) => {
+            const color = COURT_COLORS[i % COURT_COLORS.length];
+            const active = court.id === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => selectCourt(c.id)}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors",
+                  active
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-slate-200 hover:border-emerald-300"
+                )}
+              >
+                {/* 彩色小 icon（場地索引上色） */}
+                <span
+                  className="inline-block h-8 w-8 rounded-lg text-white"
+                  style={{ backgroundColor: color }}
+                >
+                  <span className="flex h-full items-center justify-center text-sm font-bold">
+                    {c.name.replace(/[^0-9]/g, "") || "場"}
+                  </span>
+                </span>
+                <span className={active ? "text-emerald-800" : "text-slate-600"}>
+                  {c.name}
+                </span>
+                {active && <span className="text-emerald-600">✓</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* 日期 */}
