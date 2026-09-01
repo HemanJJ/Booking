@@ -44,11 +44,6 @@ export default function BookingForm({
   }[];
   initialCourtId: string;
 }) {
-  // 場地小 icon 色（依場地索引循環）
-  const COURT_COLORS = [
-    "#3b82f6", "#22c55e", "#f59e0b", "#eab308", "#a855f7", "#ef4444", "#10b981", "#f97316", "#06b6d4", "#ec4899",
-  ];
-
   // 找到初始場地所屬分店
   const [venueId, setVenueId] = useState<string>(() => {
     const init = venues.flatMap((v) => v.courts).find((c) => c.id === initialCourtId);
@@ -222,9 +217,9 @@ export default function BookingForm({
       {/* 0b. 該分店的場地（彩色小 icon，點選帶資料） */}
       <div>
         <label className="mb-2 block text-sm font-semibold">選擇場地</label>
-        <div className="flex flex-wrap gap-2">
-          {currentVenue.courts.map((c, i) => {
-            const color = COURT_COLORS[i % COURT_COLORS.length];
+        {/* 白底黑字 + hover 亮燈，一列 4 格 */}
+        <div className="grid grid-cols-4 gap-2">
+          {currentVenue.courts.map((c) => {
             const active = court.id === c.id;
             return (
               <button
@@ -232,25 +227,13 @@ export default function BookingForm({
                 type="button"
                 onClick={() => selectCourt(c.id)}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors",
+                  "rounded-xl border-2 px-2 py-3 text-center text-sm font-semibold transition-all",
                   active
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-slate-200 hover:border-emerald-300"
+                    ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-800 hover:border-emerald-400 hover:bg-emerald-50"
                 )}
               >
-                {/* 彩色小 icon（場地索引上色） */}
-                <span
-                  className="inline-block h-8 w-8 rounded-lg text-white"
-                  style={{ backgroundColor: color }}
-                >
-                  <span className="flex h-full items-center justify-center text-sm font-bold">
-                    {c.name.replace(/[^0-9]/g, "") || "場"}
-                  </span>
-                </span>
-                <span className={active ? "text-emerald-800" : "text-slate-600"}>
-                  {c.name}
-                </span>
-                {active && <span className="text-emerald-600">✓</span>}
+                {c.name}
               </button>
             );
           })}
