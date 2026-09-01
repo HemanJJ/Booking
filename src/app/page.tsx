@@ -9,7 +9,7 @@ const features = [
     icon: "📅",
     title: "線上訂場",
     desc: "隨時查空檔、即時訂，24 小時不打烊，免排隊免電話。",
-    href: "/courts",
+    href: "/bookings/create",
   },
   {
     icon: "🧵",
@@ -68,7 +68,7 @@ export default async function Home() {
           </p>
           <div className="mt-8">
             <Link
-              href="/courts"
+              href="/bookings/create"
               className="rounded-full bg-white px-8 py-3 text-base font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50"
             >
               現在訂場
@@ -125,7 +125,7 @@ export default async function Home() {
           {featured.map((court) => (
             <Link
               key={court.id}
-              href={`/courts/${court.id}`}
+              href={`/bookings/create?courtId=${court.id}`}
               className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-slate-200">
