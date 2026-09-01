@@ -73,7 +73,7 @@ export default function CourtListView({
           {courts.map((court) => (
             <Link
               key={court.id}
-              href={`/courts/${court.id}`}
+              href={`/bookings/create?courtId=${court.id}`}
               className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-slate-200">
@@ -113,7 +113,7 @@ export default function CourtListView({
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-sm font-medium text-emerald-700 group-hover:underline">
-                    查看詳情
+                    立即預約
                   </span>
                   <span className="text-xs text-slate-400">
                     {formatHours(court.openingTime, court.closingTime)}
@@ -163,10 +163,10 @@ export default function CourtListView({
                 <NextSlot slot={court.nextSlot} />
               </div>
               <Link
-                href={`/courts/${court.id}`}
+                href={`/bookings/create?courtId=${court.id}`}
                 className="shrink-0 rounded-lg border border-emerald-600 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
               >
-                查看詳情
+                立即預約
               </Link>
             </div>
           ))}
