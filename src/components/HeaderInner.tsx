@@ -33,8 +33,8 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
           </span>
         </Link>
 
-        {/* nav 吃滿剩餘空間，可橫向滑動，每個按鈕方型不壓縮 */}
-        <nav className="flex min-w-0 flex-1 items-center justify-end gap-0.5 overflow-x-auto text-sm font-medium">
+        {/* nav：ml-auto 推到右，寬度自然，太多時橫向滾動，每按鈕不壓縮 */}
+        <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto text-sm font-medium sm:ml-auto">
           <Link
             href="/bookings/create"
             className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 text-slate-700 hover:bg-slate-100"
