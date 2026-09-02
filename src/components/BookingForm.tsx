@@ -201,16 +201,6 @@ export default function BookingForm({
       <input type="hidden" name="startTime" value={startTime ?? ""} />
       <input type="hidden" name="durationMinutes" value={durationMinutes} />
 
-      {/* 目前選中場地（頂部大標題，直覺 debug + 提醒客人） */}
-      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">
-          目前選中場地
-        </p>
-        <p className="mt-1 text-2xl font-bold text-emerald-800">
-          {court.venueName} · {court.name}
-        </p>
-      </div>
-
       {/* 當前選中狀態（fixed 固定在視窗底部，任何位置都看得到） */}
       <div
         className="fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-200 bg-white/95 px-4 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] backdrop-blur"
