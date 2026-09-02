@@ -76,7 +76,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     rulesByVenue.set(r.venueId, list);
   }
 
-  return NextResponse.json({
+  const resp = NextResponse.json({
     start,
     end,
     bookings: bookings.map((b) => {
@@ -108,4 +108,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       };
     }),
   });
+  resp.headers.set("Cache-Control", "no-store, max-age=0");
+  return resp;
 }

@@ -31,7 +31,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     getSlotsForDate(courtId, date, excludeBookingId),
     getActiveDiscounts(court.venueId),
   ]);
-  return NextResponse.json({
+  // 禁止快取：避免切換場地/日期時瀏覽器 or Vercel 回送舊的「可訂」狀態
+  const resp = NextResponse.json({
     court: {
       id: court.id,
       name: court.name,
@@ -43,4 +44,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     slots,
     discounts,
   });
+  resp.headers.set("Cache-Control", "no-store, max-age=0");
+  return resp;
 }
