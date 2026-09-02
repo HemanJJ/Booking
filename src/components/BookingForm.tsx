@@ -201,6 +201,21 @@ export default function BookingForm({
       <input type="hidden" name="startTime" value={startTime ?? ""} />
       <input type="hidden" name="durationMinutes" value={durationMinutes} />
 
+      {/* 目前狀態（sticky 固定底部，捲到哪都看得到）——debug 用 + 提醒客人 */}
+      <div
+        className="sticky bottom-0 z-30 -mx-2 rounded-xl border border-emerald-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur"
+      >
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-bold text-emerald-800">
+            {court.venueName} · {court.name}
+          </span>
+          <span className="text-slate-500">
+            {weekdayOf(date)} {shortDate(date)}
+            {startTime && <span className="ml-2 font-semibold text-emerald-700">{startTime} 起</span>}
+          </span>
+        </div>
+      </div>
+
       {/* 0a. 選擇分店（下拉） */}
       <div>
         <label className="mb-2 block text-sm font-semibold">選擇分店</label>
@@ -247,9 +262,6 @@ export default function BookingForm({
       <div className="relative">
         <label className="mb-2 block text-sm font-semibold">
           1. 選擇日期
-          <span className="ml-2 text-xs font-normal text-emerald-600">
-            （目前：{court.name}，可訂以其實際為準）
-          </span>
         </label>
         <button
           type="button"
@@ -324,9 +336,6 @@ export default function BookingForm({
       <div>
         <label className="mb-2 block text-sm font-semibold">
           2. 選擇開始時段
-          <span className="ml-2 text-xs font-normal text-emerald-600">
-            （{court.name}）
-          </span>
         </label>
         {loading ? (
           <p className="text-sm text-slate-500">載入時段中…</p>
