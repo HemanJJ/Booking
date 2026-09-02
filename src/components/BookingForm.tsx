@@ -201,18 +201,6 @@ export default function BookingForm({
       <input type="hidden" name="startTime" value={startTime ?? ""} />
       <input type="hidden" name="durationMinutes" value={durationMinutes} />
 
-      {/* 目前選中場地（大標題，一目了然） */}
-      <div
-        className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-5 py-4"
-      >
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">
-          目前選中場地
-        </p>
-        <p className="mt-1 text-2xl font-bold text-emerald-800">
-          {court.venueName} · {court.name}
-        </p>
-      </div>
-
       {/* 0a. 選擇分店（下拉） */}
       <div>
         <label className="mb-2 block text-sm font-semibold">選擇分店</label>
