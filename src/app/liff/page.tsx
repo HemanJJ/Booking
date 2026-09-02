@@ -52,8 +52,8 @@ export default function LiffLoginPage() {
           })
             .then((r) => r.json())
             .then((d) => {
-              // 「預訂場地」→ 登入後直接進「場地列表」讓客人選場下單
-              window.location.href = d?.ok ? "/courts" : "/account/login";
+              // 「預訂場地」→ 登入後直接進「建立訂位」（2 頁化：不繞場地列表）
+              window.location.href = d?.ok ? "/bookings/create" : "/account/login";
             });
         })
         .catch(() => {

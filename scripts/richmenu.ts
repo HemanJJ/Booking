@@ -27,7 +27,7 @@ const AREAS = [
   { x: 0, y: 140, w: 1250, h: 515, label: "查詢訂單", type: "message", text: "查詢訂單" },
   { x: 1250, y: 140, w: 1250, h: 515, label: "預訂場地", type: "uri", uri: "https://liff.line.me/1660947211-e5z12ax6" },
   { x: 0, y: 655, w: 1250, h: 515, label: "價目表", type: "message", text: "價目表" },
-  { x: 1250, y: 655, w: 1250, h: 515, label: "我的訂位", type: "uri", uri: "https://difly-booking.vercel.app/bookings" },
+  { x: 1250, y: 655, w: 1250, h: 515, label: "我的訂位", type: "uri", uri: "https://dearfly.com.tw/bookings" },
   { x: 0, y: 1170, w: 1250, h: 516, label: "用品商城", type: "message", text: "用品商城" },
   { x: 1250, y: 1170, w: 1250, h: 516, label: "聯絡客服", type: "message", text: "客服" },
 ];
