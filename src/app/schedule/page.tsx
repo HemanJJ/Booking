@@ -35,10 +35,10 @@ export default async function SchedulePage() {
 
       <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
         想直接預約？到{" "}
-        <Link href="/courts" className="font-semibold text-emerald-700 hover:underline">
-          場館預約
+        <Link href="/bookings/create" className="font-semibold text-emerald-700 hover:underline">
+          建立預訂
         </Link>{" "}
-        挑選場地，或點上方週表的場地名稱。
+        選擇分店與場地，或點上方週表的場地名稱。
       </div>
     </div>
   );

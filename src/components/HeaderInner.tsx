@@ -35,7 +35,7 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
 
         <nav className="flex items-center gap-1 text-sm font-medium">
           <Link
-            href="/courts"
+            href="/bookings/create"
             className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
           >
             場館預約
@@ -87,7 +87,7 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
                 登入
               </Link>
               <Link
-                href="/courts"
+                href="/bookings/create"
                 className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-700"
               >
                 立即預約
