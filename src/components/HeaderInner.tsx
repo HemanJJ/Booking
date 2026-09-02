@@ -33,39 +33,44 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1 text-sm font-medium">
+        <nav className="flex min-w-0 items-center gap-0.5 text-sm font-medium">
           <Link
             href="/courts"
-            className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+            className="whitespace-nowrap rounded-md px-2 py-2 text-slate-700 hover:bg-slate-100 sm:px-3"
           >
-            場館預約
+            <span className="sm:hidden">預約</span>
+            <span className="hidden sm:inline">場館預約</span>
           </Link>
           <Link
             href="/schedule"
-            className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+            className="whitespace-nowrap rounded-md px-2 py-2 text-slate-700 hover:bg-slate-100 sm:px-3"
           >
-            查閱場地
+            <span className="sm:hidden">場地</span>
+            <span className="hidden sm:inline">查閱場地</span>
           </Link>
           <Link
             href="/bookings"
-            className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+            className="whitespace-nowrap rounded-md px-2 py-2 text-slate-700 hover:bg-slate-100 sm:px-3"
           >
-            我的訂位
+            <span className="sm:hidden">訂位</span>
+            <span className="hidden sm:inline">我的訂位</span>
           </Link>
           {member && (
             <Link
               href="/account/password"
-              className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+              className="whitespace-nowrap rounded-md px-2 py-2 text-slate-700 hover:bg-slate-100 sm:px-3"
             >
-              修改密碼
+              <span className="sm:hidden">密碼</span>
+              <span className="hidden sm:inline">修改密碼</span>
             </Link>
           )}
           {(member?.role === "admin" || member?.role === "staff") && (
             <Link
               href="/admin"
-              className="rounded-md px-3 py-2 font-semibold text-emerald-700 hover:bg-emerald-50"
+              className="whitespace-nowrap rounded-md px-2 py-2 font-semibold text-emerald-700 hover:bg-emerald-50 sm:px-3"
             >
-              管理後台
+              <span className="sm:hidden">後台</span>
+              <span className="hidden sm:inline">管理後台</span>
             </Link>
           )}
         </nav>
