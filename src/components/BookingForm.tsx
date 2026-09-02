@@ -211,10 +211,14 @@ export default function BookingForm({
         </p>
       </div>
 
-      {/* 當前日期+時段（sticky 底部小條，捲動時提示） */}
-      <div className="sticky bottom-0 z-30 -mx-2 rounded-xl border border-emerald-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-bold text-emerald-800">{court.name}</span>
+      {/* 當前選中狀態（fixed 固定在視窗底部，任何位置都看得到） */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-200 bg-white/95 px-4 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] backdrop-blur"
+      >
+        <div className="mx-auto flex max-w-3xl items-center justify-between text-sm">
+          <span className="font-bold text-emerald-800">
+            {court.venueName} · {court.name}
+          </span>
           <span className="text-slate-500">
             {weekdayOf(date)} {shortDate(date)}
             {startTime && <span className="ml-2 font-semibold text-emerald-700">{startTime} 起</span>}
