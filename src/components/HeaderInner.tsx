@@ -20,7 +20,7 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
         <Link
           href="/"
-          className="flex items-center gap-2"
+          className="flex shrink-0 items-center gap-2"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -33,29 +33,29 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1 text-sm font-medium">
+        <nav className="flex items-center gap-1 overflow-x-auto text-sm font-medium">
           <Link
             href="/bookings/create"
-            className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+            className="shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
           >
             場館預約
           </Link>
           <Link
             href="/schedule"
-            className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+            className="shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
           >
             查閱場地
           </Link>
           <Link
             href="/bookings"
-            className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+            className="shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
           >
             我的訂位
           </Link>
           {member && (
             <Link
               href="/account/password"
-              className="rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
+              className="shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-slate-100"
             >
               修改密碼
             </Link>
@@ -63,7 +63,7 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
           {(member?.role === "admin" || member?.role === "staff") && (
             <Link
               href="/admin"
-              className="rounded-md px-3 py-2 font-semibold text-emerald-700 hover:bg-emerald-50"
+              className="shrink-0 whitespace-nowrap rounded-md px-3 py-2 font-semibold text-emerald-700 hover:bg-emerald-50"
             >
               管理後台
             </Link>
