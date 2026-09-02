@@ -201,14 +201,20 @@ export default function BookingForm({
       <input type="hidden" name="startTime" value={startTime ?? ""} />
       <input type="hidden" name="durationMinutes" value={durationMinutes} />
 
-      {/* 目前狀態（sticky 固定底部，捲到哪都看得到）——debug 用 + 提醒客人 */}
-      <div
-        className="sticky bottom-0 z-30 -mx-2 rounded-xl border border-emerald-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur"
-      >
+      {/* 目前選中場地（頂部大標題，直覺 debug + 提醒客人） */}
+      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-5 py-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">
+          目前選中場地
+        </p>
+        <p className="mt-1 text-2xl font-bold text-emerald-800">
+          {court.venueName} · {court.name}
+        </p>
+      </div>
+
+      {/* 當前日期+時段（sticky 底部小條，捲動時提示） */}
+      <div className="sticky bottom-0 z-30 -mx-2 rounded-xl border border-emerald-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur">
         <div className="flex items-center justify-between text-sm">
-          <span className="font-bold text-emerald-800">
-            {court.venueName} · {court.name}
-          </span>
+          <span className="font-bold text-emerald-800">{court.name}</span>
           <span className="text-slate-500">
             {weekdayOf(date)} {shortDate(date)}
             {startTime && <span className="ml-2 font-semibold text-emerald-700">{startTime} 起</span>}
