@@ -115,7 +115,10 @@ export default function BookingForm({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/bookings/available?courtId=${court.id}&date=${date}`)
+    // cache: "no-store" 徹底禁快取（LINE LIFF WebView 可能忽略 server 端的 no-store）
+    fetch(`/api/bookings/available?courtId=${court.id}&date=${date}`, {
+      cache: "no-store",
+    })
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled) {

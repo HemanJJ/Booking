@@ -64,7 +64,7 @@ export default function WeekSchedule({
   useEffect(() => {
     let cancelled = false;
     const load = () =>
-      fetch(`/api/bookings/week?start=${startStr}&days=7`)
+      fetch(`/api/bookings/week?start=${startStr}&days=7`, { cache: "no-store" })
         .then((r) => r.json())
         .then((d) => {
           if (!cancelled) {
