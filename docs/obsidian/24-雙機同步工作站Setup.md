@@ -23,16 +23,14 @@ created: 2026-09-01
 
 ## Dashboard（新版,跨機版本）
 
-- 檔案：`~/Desktop/projects/code/dashboard_server.py` + `dashboard.html`（Air 上放在 `~/code/dashboard/`）
-- 功能：加了「**🖥 跨機同步**」分頁 + 4 支 API（`/api/machine`、`/api/sync-status`、`/api/parity`、`/api/sync-git`）+ **路徑自動解析**
-- **路徑解析（關鍵）**：`resolve_path` 用**掃描（iterdir）**找專案（`ALT_ROOTS` = `~/Desktop/projects/code`、`~/code`、`~/Documents/GitHub`、`~/Booking`）。
-  - ⚠️ **千萬不要用 `Path.exists()` 判斷** —— macOS TCC 會讓 `~/Desktop` 下**不存在的路徑也回 True**,導致解析失效（踩過這個坑）。
-- `--no-browser` 參數：供 launchd 自動啟動用,不亂彈瀏覽器。
-- **launchd 自動啟動**（兩台都要）：
-  - home：`~/Library/LaunchAgents/com.difly.dashboard.plist`（`/opt/homebrew/bin/python3` → `~/Desktop/projects/code/dashboard_server.py --no-browser`,RunAtLoad+KeepAlive）
-  - Air：指向 **`~/code/dashboard/dashboard_server.py --no-browser`**（放 `~/code/dashboard` 而非 `~/Desktop` —— **TCC 安全,launchd 才不會被擋**）
-- `🚀 Dashboard.command`（**智能版**）：已跑→只開瀏覽器;沒跑→啟動新版。**不再 pkill / 搶 8899 / 用舊 `_workstation`**。
-- 舊版 `~/Desktop/projects/code/_workstation/dashboard_server.py`：已被取代,勿再自動啟動（它一直搶 8899、指舊版,是之前「還不一樣+報錯」的元凶）。
+- **真正的（活躍）dashboard = `~/Desktop/projects/code/_workstation/dashboard_server.py` + `.html`**——功能最全：**💬 LINE 額度計次、🔑 登入速查、🌐 常用網址、🧠 別忘的關鍵、Codex LLM Router、Claude Router、OpenRouter** 等都在。
+- 「**🖥 跨機同步**」已**加**進 _workstation（`/api/machine`、`/api/sync-status`、`/api/parity`、`/api/sync-git` + 路徑解析 + 一鍵同步分頁）——**純加法,原有功能沒刪**（2026-09-04 整合;備份 `dashboard_server.py.bak-integ` / `dashboard.html.bak-integ`）。
+- ⚠️ 另有 `~/Desktop/projects/code/dashboard_server.py`（較簡版）＝**不是活躍版,別混用**（之前誤當新版、害原功能看似消失,已改回 _workstation 為基底）。
+- **路徑解析**：`resolve_path` 用**掃描（iterdir）**找專案（`ALT_ROOTS` = `~/Desktop/projects/code`、`~/code`、`~/Documents/GitHub`、`~/Booking`）。
+  - ⚠️ 千萬別用 `Path.exists()` 判斷 —— macOS TCC 讓 `~/Desktop` 下不存在的路徑也回 True（踩過）。
+- `--no-browser`：供 launchd 用,不亂彈瀏覽器。
+- **launchd**：home 指 `_workstation/dashboard_server.py --no-browser`;Air 指 `~/code/dashboard/dashboard_server.py --no-browser`（TCC 安全）。
+- `🚀 Dashboard.command`（智能版）指 _workstation：已跑→只開瀏覽器;沒跑→啟動。
 
 ## 程式碼同步（git / GitHub）
 
