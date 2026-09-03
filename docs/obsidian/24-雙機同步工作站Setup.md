@@ -59,6 +59,17 @@ created: 2026-09-01
 - 解法：受 TCC 影響的東西放**非 Desktop** 位置（如 Air 的 `~/code/dashboard`）;或給 syncthing / python3 授「完整磁碟存取權」。
 - Air 桌面 `🚀 Dashboard.command` 無法由 SSH 覆寫（TCC）;要改須在 **Air Terminal** 跑 `cp ~/code/dashboard/Dashboard.command ~/Desktop/🚀\ Dashboard.command`。
 
+## DSH（DeepSeek Harness）啟動
+
+- **⚠️ 啟動要加 `web`**：`npx @deepseek-ai/dsh web`。裸跑 `npx @deepseek-ai/dsh` 會報 `--profile <name> is required`（exit 1）。
+- `dsh` = 啟動一個 profile；`web` 只是其中一個（瀏覽器 GUI @ 127.0.0.1:3080）。
+- 三種用法：
+  - `dsh web` — 瀏覽器 GUI
+  - `dsh --profile headless "任務"` — 終端跑一次、印結果、退出
+  - `dsh --profile tui --resume <session>` — 終端文字界面
+- 背景常駐重啟（關窗口不死）：`lsof -ti :3080 | xargs kill -9 2>/dev/null; sleep 1; cd ~/Documents/deepseekharness && nohup npx @deepseek-ai/dsh web > /tmp/dsh.log 2>&1 & sleep 3 && open http://127.0.0.1:3080`
+- 已加進 dashboard「系統」分類的「🤖 DSH」項目（一鍵重啟＋開 GUI）。
+
 ## 相關
 
 - [[01-專案總覽]]
