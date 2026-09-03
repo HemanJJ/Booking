@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { stopRecurringBookingAction, resumeRecurringBookingAction } from "@/app/admin/actions";
 import { formatDate, formatDuration } from "@/lib/utils";
 import RecurringForm from "@/components/admin/RecurringForm";
+import PendingSubmitButton from "@/components/PendingSubmitButton";
 
 export const metadata: Metadata = {
   title: "固定訂位",
@@ -154,23 +155,17 @@ export default async function AdminRecurringPage({
                       {r.status === "stopped" && (
                         <form action={resumeRecurringBookingAction}>
                           <input type="hidden" name="id" value={r.id} />
-                          <button
-                            type="submit"
-                            className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
-                          >
+                          <PendingSubmitButton className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
                             恢復
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       )}
                       {r.status === "active" && (
                         <form action={stopRecurringBookingAction}>
                           <input type="hidden" name="id" value={r.id} />
-                          <button
-                            type="submit"
-                            className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                          >
+                          <PendingSubmitButton className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50">
                             停止系列
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       )}
                     </div>

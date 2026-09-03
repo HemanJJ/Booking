@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { releaseExpiredBookings, generateRecurringBookings } from "@/lib/booking";
+import { releaseExpiredBookings } from "@/lib/booking";
 import { formatPrice, formatDate, localDateString } from "@/lib/utils";
 import { toggleCashPaymentAction, adminCancelBookingAction } from "@/app/admin/actions";
 import TodayOverview from "@/components/admin/TodayOverview";
+import PendingSubmitButton from "@/components/PendingSubmitButton";
 
 export const metadata: Metadata = {
   title: "儀表板",
@@ -28,9 +29,8 @@ const PAYMENT_LABEL: Record<string, string> = {
 };
 
 export default async function AdminDashboard() {
-  // 惰性維護：釋放逾期訂位＋生成未來 4 週固定訂位
+  // 釋放逾期訂位（快）。固定位改由「每日 cron＋新增/編輯/恢復固定位」生成，避免每次開後台都慢。
   await releaseExpiredBookings();
-  await generateRecurringBookings();
 
   const today = localDateString(new Date());
   const [courts, todayBookings, recent] = await Promise.all([
@@ -149,8 +149,7 @@ export default async function AdminDashboard() {
                             <>
                               <form action={toggleCashPaymentAction}>
                                 <input type="hidden" name="id" value={b.id} />
-                                <button
-                                  type="submit"
+                                <PendingSubmitButton
                                   className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
                                     b.paymentStatus === "cash"
                                       ? "border-amber-300 text-amber-700 hover:bg-amber-50"
@@ -160,7 +159,7 @@ export default async function AdminDashboard() {
                                   {b.paymentStatus === "cash"
                                     ? "改回未收"
                                     : "標已收現金"}
-                                </button>
+                                </PendingSubmitButton>
                               </form>
                               <Link
                                 href={`/admin/bookings/${b.id}/edit`}
@@ -170,12 +169,9 @@ export default async function AdminDashboard() {
                               </Link>
                               <form action={adminCancelBookingAction}>
                                 <input type="hidden" name="id" value={b.id} />
-                                <button
-                                  type="submit"
-                                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                                >
+                                <PendingSubmitButton className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
                                   取消
-                                </button>
+                                </PendingSubmitButton>
                               </form>
                             </>
                           )}
