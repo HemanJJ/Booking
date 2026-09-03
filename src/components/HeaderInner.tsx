@@ -39,26 +39,30 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
             href="/bookings/create"
             className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 text-slate-700 hover:bg-slate-100"
           >
-            場館預約
+            <span className="sm:hidden">預約</span>
+            <span className="hidden sm:inline">場館預約</span>
           </Link>
           <Link
             href="/schedule"
             className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 text-slate-700 hover:bg-slate-100"
           >
-            查閱場地
+            <span className="sm:hidden">場地</span>
+            <span className="hidden sm:inline">查閱場地</span>
           </Link>
           <Link
             href="/bookings"
             className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 text-slate-700 hover:bg-slate-100"
           >
-            我的訂位
+            <span className="sm:hidden">訂位</span>
+            <span className="hidden sm:inline">我的訂位</span>
           </Link>
           {member && (
             <Link
               href="/account/password"
               className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 text-slate-700 hover:bg-slate-100"
             >
-              修改密碼
+              <span className="sm:hidden">密碼</span>
+              <span className="hidden sm:inline">修改密碼</span>
             </Link>
           )}
           {(member?.role === "admin" || member?.role === "staff") && (
@@ -66,7 +70,8 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
               href="/admin"
               className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-2 font-semibold text-emerald-700 hover:bg-emerald-50"
             >
-              管理後台
+              <span className="sm:hidden">後台</span>
+              <span className="hidden sm:inline">管理後台</span>
             </Link>
           )}
         </nav>
