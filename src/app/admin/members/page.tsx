@@ -9,6 +9,7 @@ import {
   banMemberAction,
 } from "@/app/admin/actions";
 import AddMemberForm from "@/components/admin/AddMemberForm";
+import PendingSubmitButton from "@/components/PendingSubmitButton";
 
 export const metadata: Metadata = {
   title: "會員管理",
@@ -109,45 +110,33 @@ export default async function AdminMembersPage() {
                       {!isSelf && (
                         <form action={toggleStaffAction}>
                           <input type="hidden" name="id" value={m.id} />
-                          <button
-                            type="submit"
-                            className="rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50"
-                          >
+                          <PendingSubmitButton className="rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50">
                             {isStaff ? "取消員工" : "設為員工"}
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       )}
                       {!isSelf && (
                         <form action={toggleMemberRoleAction}>
                           <input type="hidden" name="id" value={m.id} />
-                          <button
-                            type="submit"
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                          >
+                          <PendingSubmitButton className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100">
                             {isAdmin ? "取消管理員" : "設為管理員"}
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       )}
                       {!isSelf &&
                         (m.banned ? (
                           <form action={unlockMemberAction}>
                             <input type="hidden" name="id" value={m.id} />
-                            <button
-                              type="submit"
-                              className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
-                            >
+                            <PendingSubmitButton className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
                               解鎖
-                            </button>
+                            </PendingSubmitButton>
                           </form>
                         ) : (
                           <form action={banMemberAction}>
                             <input type="hidden" name="id" value={m.id} />
-                            <button
-                              type="submit"
-                              className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                            >
+                            <PendingSubmitButton className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50">
                               停權
-                            </button>
+                            </PendingSubmitButton>
                           </form>
                         ))}
                     </div>

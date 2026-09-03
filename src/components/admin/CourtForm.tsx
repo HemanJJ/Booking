@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { saveCourtAction } from "@/app/admin/actions";
+import Spinner from "@/components/Spinner";
 
 export type CourtInput = {
   id?: string;
@@ -113,8 +114,9 @@ export default function CourtForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
       >
+        {pending && <Spinner />}
         {pending ? "儲存中…" : court?.id ? "儲存變更" : "新增場地"}
       </button>
     </form>

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { cn, nextDates } from "@/lib/utils";
 import SlotPicker from "./SlotPicker";
 import { adminCreateBookingAction, type AdminState } from "@/app/admin/actions";
+import Spinner from "@/components/Spinner";
 
 export type CourtOption = {
   id: string;
@@ -223,8 +224,9 @@ export default function AdminCreateBookingForm({
       <button
         type="submit"
         disabled={pending || !canSubmit}
-        className="w-full rounded-xl bg-emerald-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
       >
+        {pending && <Spinner />}
         {pending ? "送出中…" : "建立訂位"}
       </button>
     </form>
