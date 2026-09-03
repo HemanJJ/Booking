@@ -31,6 +31,11 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+      {/* 用原生 media query 控制「手机短标签 / 电脑长标签」，不依賴 Tailwind responsive class（Tailwind v4 在部分浏览不生效） */}
+      <style>{`
+        @media (max-width: 639px) { .nav-full { display: none; } }
+        @media (min-width: 640px)  { .nav-short { display: none; } }
+      `}</style>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-3">
         <Link
           href="/"
@@ -53,30 +58,30 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
             href="/bookings/create"
             className={navCls(onBookingCreate)}
           >
-            <span className="sm:hidden">預約</span>
-            <span className="hidden sm:inline">場館預約</span>
+            <span className="nav-short">預約</span>
+            <span className="nav-full">場館預約</span>
           </Link>
           <Link
             href="/schedule"
             className={navCls(onSchedule)}
           >
-            <span className="sm:hidden">場地</span>
-            <span className="hidden sm:inline">查閱場地</span>
+            <span className="nav-short">場地</span>
+            <span className="nav-full">查閱場地</span>
           </Link>
           <Link
             href="/bookings"
             className={navCls(onBookings)}
           >
-            <span className="sm:hidden">訂位</span>
-            <span className="hidden sm:inline">我的訂位</span>
+            <span className="nav-short">訂位</span>
+            <span className="nav-full">我的訂位</span>
           </Link>
           {member && (
             <Link
               href="/account/password"
               className={navCls(onPassword)}
             >
-              <span className="sm:hidden">密碼</span>
-              <span className="hidden sm:inline">修改密碼</span>
+              <span className="nav-short">密碼</span>
+              <span className="nav-full">修改密碼</span>
             </Link>
           )}
           {(member?.role === "admin" || member?.role === "staff") && (
@@ -84,8 +89,8 @@ export default function HeaderInner({ member }: { member: HeaderMember }) {
               href="/admin"
               className={navCls(onAdmin)}
             >
-              <span className="sm:hidden">後台</span>
-              <span className="hidden sm:inline">管理後台</span>
+              <span className="nav-short">後台</span>
+              <span className="nav-full">管理後台</span>
             </Link>
           )}
         </nav>
