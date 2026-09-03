@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMember } from "@/lib/auth";
 import {
@@ -15,18 +16,43 @@ export const metadata: Metadata = {
   title: "會員管理",
 };
 
-export default async function AdminMembersPage() {
+export default async function AdminMembersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
   await requireRole(["admin"]);
   const [current, members] = await Promise.all([
     getCurrentMember(),
     prisma.member.findMany({ orderBy: { createdAt: "asc" } }),
   ]);
+  const { edit } = await searchParams;
+  const editing = edit ? members.find((m) => m.id === edit) ?? null : null;
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">會員管理</h1>
+      {editing && (
+        <Link
+          href="/admin/members"
+          className="mb-6 inline-block rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+        >
+          ← 取消編輯
+        </Link>
+      )}
 
-      <AddMemberForm />
+      <AddMemberForm
+        member={
+          editing
+            ? {
+                id: editing.id,
+                name: editing.name,
+                email: editing.email,
+                phone: editing.phone,
+              }
+            : undefined
+        }
+      />
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-sm">
@@ -107,6 +133,12 @@ export default async function AdminMembersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/admin/members?edit=${m.id}`}
+                        className="rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                      >
+                        編輯
+                      </Link>
                       {!isSelf && (
                         <form action={toggleStaffAction}>
                           <input type="hidden" name="id" value={m.id} />
