@@ -434,7 +434,7 @@ export async function adminCreateBookingAction(
   _prev: AdminState,
   formData: FormData
 ): Promise<AdminState> {
-  await requireStaff();
+  const staff = await requireStaff();
   const courtId = String(formData.get("courtId") ?? "").trim();
   const date = String(formData.get("date") ?? "").trim();
   const startTime = String(formData.get("startTime") ?? "").trim();
@@ -460,9 +460,12 @@ export async function adminCreateBookingAction(
       await markBookingPaid(booking.id, "cash");
     }
     const isPhone = source === "phone";
+    const actorName = isPhone
+      ? `📞 ${staff.name}（電話訂位）`
+      : `🧑 ${staff.name}（代客）`;
     await logBookingEvent({
       bookingId: booking.id,
-      actorName: "管理員",
+      actorName,
       action: "create",
       detail: `${isPhone ? "📞 電話訂位" : "代客下單"}｜${booking.venueName} ${booking.courtName}｜${booking.date} ${booking.startTime}-${booking.endTime}｜${formatPrice(booking.totalPrice)}${payNow === "cash" ? "｜已收現金" : "｜未收"}`,
     });

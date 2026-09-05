@@ -22,20 +22,87 @@ function fmt(d: Date): string {
   return d.toLocaleString("zh-TW", { hour12: false, timeZone: "Asia/Taipei" });
 }
 
-export default async function AdminLogsPage() {
+// 从 actorName 除掉 emoji / 括号备注，只留姓名（方便筛选 & 显示）
+function cleanActor(actorName: string): string {
+  return actorName
+    .replace(/[📞🧑🔴🟢]/g, "")
+    .replace(/（[^）]*）/g, "")
+    .trim();
+}
+
+export default async function AdminLogsPage({
+  searchParams,
+}: {
+  searchParams?: { staff?: string };
+}) {
   await requireRole(["admin"]);
+  const staffFilter = (searchParams?.staff ?? "").trim();
+
+  // 过滤逻辑：staffFilter 若给定，就只留下「操作者姓名包含该词」的纪录
   const logs = await prisma.bookingLog.findMany({
+    where: staffFilter
+      ? { actorName: { contains: staffFilter } }
+      : undefined,
     take: 100,
     orderBy: { createdAt: "desc" },
   });
 
+  // 列出所有出现过的操作者姓名（去重），作为筛选项
+  const allLogs = await prisma.bookingLog.findMany({
+    select: { actorName: true },
+    orderBy: { createdAt: "desc" },
+    take: 300,
+  });
+  const staffOptions = Array.from(
+    new Set(allLogs.map((l) => cleanActor(l.actorName)).filter(Boolean))
+  ).sort();
+
+  const total = logs.length;
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">異動紀錄（logfile）</h1>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">異動紀錄（logfile）</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            依員工篩選，追溯每筆「誰做的」（代客下單會帶出操作者姓名）。
+          </p>
+        </div>
 
-      {logs.length === 0 ? (
+        <form className="flex items-center gap-2" action="/admin/logs">
+          <label className="text-sm text-slate-600">操作者</label>
+          <select
+            name="staff"
+            defaultValue={staffFilter}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          >
+            <option value="">全部</option>
+            {staffOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          >
+            篩選
+          </button>
+          {staffFilter && (
+            <a
+              href="/admin/logs"
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
+            >
+              清除
+            </a>
+          )}
+        </form>
+      </div>
+
+      {total === 0 ? (
         <p className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-          尚無異動紀錄。
+          {staffFilter ? "此員工尚無異動紀錄。" : "尚無異動紀錄。"}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -60,7 +127,9 @@ export default async function AdminLogsPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-slate-500">
                       {fmt(l.createdAt)}
                     </td>
-                    <td className="px-4 py-3 font-medium">{l.actorName}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-medium">
+                      {l.actorName}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-medium ${a.cls}`}
